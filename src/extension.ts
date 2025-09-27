@@ -1,15 +1,23 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { JudySidebarProvider } from './sidebarProvider';
+import { JudySidebarProvider } from './sidebarProvider.js';
+import { setupEnvironment, checkEnvironmentSetup } from './setup.js';
+import * as dotenv from "dotenv";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+	console.log('Activating Judy AI Companion...');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "judy" is now active!');
+	// Load environment variables from .env file in extension directory
+	dotenv.config({ path: context.extensionUri.fsPath + '/.env' });
+
+	// Check environment setup first
+	const envReady = await checkEnvironmentSetup(context.extensionUri);
+
+	if (!envReady) {
+		console.log('Environment not fully configured, but continuing activation...');
+	}
+
+	console.log("Gemini key configured:", !!process.env.GEMINI_API_KEY);
+	console.log("ElevenLabs key configured:", !!process.env.ELEVENLABS_API_KEY);
 
 	// Register the sidebar provider
 	const sidebarProvider = new JudySidebarProvider(context.extensionUri);
@@ -17,16 +25,22 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(JudySidebarProvider.viewType, sidebarProvider)
 	);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('judy.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from judy!');
+	// Register commands
+	const helloWorldCommand = vscode.commands.registerCommand('judy.helloWorld', () => {
+		vscode.window.showInformationMessage('Hello World from Judy!');
 	});
 
-	context.subscriptions.push(disposable);
+	const setupCommand = vscode.commands.registerCommand('judy.setupEnvironment', async () => {
+		const success = await setupEnvironment(context.extensionUri);
+		if (success) {
+			// Reload environment variables after setup
+			dotenv.config({ path: context.extensionUri.fsPath + '/.env' });
+		}
+	});
+
+	context.subscriptions.push(helloWorldCommand, setupCommand);
+
+	console.log('Judy AI Companion activated successfully!');
 }
 
 // This method is called when your extension is deactivated

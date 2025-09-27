@@ -3,6 +3,7 @@
 	"displayName": "judy",
 	"description": "AI Companion to help you lock in",
 	"version": "0.0.1",
+	"type": "module",
 	"engines": {
 		"vscode": "^1.104.0"
 	},
@@ -16,20 +17,25 @@
 			{
 				"command": "judy.helloWorld",
 				"title": "Hello World"
+			},
+			{
+				"command": "judy.setupEnvironment",
+				"title": "Setup Environment",
+				"category": "Judy"
 			}
 		],
 		"views": {
 			"explorer": [
 				{
 					"id": "judySidebar",
-					"name": "Judy",
+					"name": "Judy AI Companion",
 					"type": "webview",
 					"when": "true"
 				}
 			]
 		},
 		"configuration": {
-			"title": "Judy",
+			"title": "Judy AI Companion",
 			"properties": {
 				"judy.currentCharacter": {
 					"type": "string",
@@ -74,6 +80,7 @@
 		"@google/genai": "^1.21.0",
 		"@google/generative-ai": "^0.24.1",
 		"dotenv": "^17.2.2",
+		"ffmpeg": "^0.0.4",
 		"openai": "^5.23.1"
 	}
 }

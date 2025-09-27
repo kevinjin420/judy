@@ -1,7 +1,7 @@
 // file: driver.mts
 import fs from "fs/promises";
-import { askGemini } from "./llmcall.ts"; // Gemini conversation memory
-import { speak } from "./11labstest.ts";              // ElevenLabs TTS function
+import { speak } from './11labstest.mjs';
+import { askGemini, chatWithContext } from './llmcall.mjs';
 
 /**
  * Ask Gemini for a conversational response that may include code.
@@ -11,30 +11,31 @@ import { speak } from "./11labstest.ts";              // ElevenLabs TTS function
  * @returns { text: string, code?: string }
  */
 export async function gptConversationalResponse(prompt: string) {
-  const reply = await chatWithContext(`User prompt: ${prompt}`);
+    const reply = await chatWithContext(`User prompt: ${prompt}`);
 
-  try {
-    const { text } = JSON.parse(reply);
-    return { text };
-  } catch {
-    return { text: reply };
-  }
+    try {
+        const { text } = JSON.parse(reply);
+        return { text };
+    } catch {
+        return { text: reply };
+    }
 }
 
 /**
  * Main driver: gets Gemini response, speaks it, saves code if present.
  */
 export async function runDriver(prompt: string) {
-  const text = await askGemini(prompt);
+    const text = await askGemini(prompt);
 
-  console.log("Gemini says:\n", text);
+    console.log("Gemini says:\n", text);
 
-  await speak(text);
+    await speak(text);
+	return text;
 }
 
 // Example usage from CLI
 if (process.argv[2]) {
-  runDriver(process.argv.slice(2).join(" ")).catch(console.error);
+    runDriver(process.argv.slice(2).join(" ")).catch(console.error);
 } else {
-  console.log('Usage: node --loader ts-node/esm driver.mts "Your prompt here"');
+    console.log('Usage: node --loader ts-node/esm driver.mts "Your prompt here"');
 }

@@ -137,3 +137,46 @@ html, body {
 .avatar-image.flipped {
     transform: scaleX(-1);
 }
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.chat-response {
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    min-height: 30px;
+    max-height: 60px;
+    overflow-y: auto;
+    font-size: 12px;
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 4px;
+}
+
+.chat-input {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--vscode-input-border);
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-size: 12px;
+}
+
+.chat-send {
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: none;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+}

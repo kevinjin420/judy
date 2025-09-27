@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AvatarManager } from './avatars/components/avatarManager';
-import { AvatarState } from './avatars/types/avatar';
+import { AvatarManager } from './avatars/components/avatarManager.js';
+import { AvatarState, Character } from './avatars/types/avatar.js';
+import "dotenv/config";
+import { askGemini } from './llmcall.mjs';
+import { speak } from './11labstest.mjs';
 
 export class JudySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'judySidebar';
@@ -37,9 +40,12 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private async _handleWebviewMessage(message: any) {
+        console.log('Received message from Webview:', message);
+
         switch (message.type) {
             case 'getCharacters':
                 this._sendCharactersToWebview();
+                this._sendSidebarLocation();
                 break;
 
             case 'selectCharacter':
@@ -59,7 +65,18 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 this._updateAvatarState(message.state as AvatarState);
                 break;
 
+            case 'chatMessage':
+                const userMsg = message.text;
+                console.log('Chat message received:', userMsg);
 
+                const responseText = await askGemini(userMsg);
+
+                this._view?.webview.postMessage({
+                    type: 'chatResponse',
+                    text: responseText
+                });
+                await speak(responseText);
+                break;
 
             default:
                 console.warn('Unknown message type:', message.type);
@@ -74,7 +91,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         const characters = this._avatarManager.getCharacterList();
         this._view.webview.postMessage({
             type: 'charactersLoaded',
-            characters: characters.map(char => ({
+            characters: characters.map((char: Character) => ({
                 id: char.id,
                 displayName: char.displayName,
                 description: char.description
@@ -173,7 +190,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     private _updateAvatarState(state: AvatarState) {
         if (!this._view) {
             return;
-        } 
+        }
 
         this._avatarManager.setState(state);
 
@@ -187,7 +204,6 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             frameMap: frameMap
         });
     }
-
 
     // Public methods for external use
     public setAvatarState(state: AvatarState) {
@@ -231,8 +247,6 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             location: sidebarLocation
         });
     }
-
-
 
     public dispose() {
     }
