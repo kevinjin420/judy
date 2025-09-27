@@ -58,7 +58,7 @@ export async function askGemini(userPrompt: string): Promise<string> {
   return reply;
 }
 
-function changeprompt(prompt: string) {
+export function changeprompt(prompt: string) {
   PREPROMPT = prompt;
   conversationHistory.length = 0;
 }

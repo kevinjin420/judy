@@ -14,6 +14,7 @@ export interface Character {
     name: string;
     displayName: string;
     description: string;
+    voiceid: string;
     version: string;
     systemPrompt: string;
     author: string;

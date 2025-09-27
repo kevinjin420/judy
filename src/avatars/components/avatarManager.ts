@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Character, AvatarState, AvatarManager as IAvatarManager, FrameMap } from '../types/avatar.js';
+import { changeprompt } from "../../llmcall.mjs";
+import { updatevoice } from "../../11labstest.mjs"
 
 
 export class AvatarManager implements IAvatarManager {
@@ -80,6 +82,8 @@ export class AvatarManager implements IAvatarManager {
     async switchCharacter(characterId: string): Promise<void> {
         try {
             const character = await this.loadCharacter(characterId);
+            changeprompt(character.systemPrompt);
+            updatevoice(character.voiceid);
             this._currentCharacter = character;
             this.setState(AvatarState.IDLE);
 
