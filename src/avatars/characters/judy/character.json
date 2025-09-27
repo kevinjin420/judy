@@ -12,8 +12,8 @@
   "enabled": true,
   "frames": {
     "default": "Judy.png",
+    "talking": "Judy_Talking.png",
     "happy": "Judy_Happy.png",
-    "talking": "talking.png",
     "thinking": "thinking.png"
   }
 }

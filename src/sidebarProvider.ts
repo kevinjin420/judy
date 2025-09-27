@@ -78,6 +78,21 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 await speak(responseText);
                 break;
 
+            case 'petMessage':
+                console.log('Pet message received for character:', message.characterId);
+
+                // Get character-specific pet response
+                const character = this._avatarManager.currentCharacter;
+                const characterName = character?.displayName || 'the character';
+                const petResponse = await askGemini(`The user just pet ${characterName}. Respond warmly and briefly to being petted, staying in character.`);
+
+                this._view?.webview.postMessage({
+                    type: 'chatResponse',
+                    text: petResponse
+                });
+                await speak(petResponse);
+                break;
+
             default:
                 console.warn('Unknown message type:', message.type);
         }

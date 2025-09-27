@@ -86,6 +86,12 @@ petButton.addEventListener("click", () => {
 	console.log("Avatar petted!");
 	showHeartTooltip();
 	switchToHappyState();
+
+	// Send pet message to LLM
+	vscode.postMessage({
+		type: 'petMessage',
+		characterId: state.selectedCharacter
+	});
 });
 
 function showHeartTooltip() {
