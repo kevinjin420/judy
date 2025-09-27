@@ -1,0 +1,21 @@
+{
+	"id": "penny",
+	"name": "penny",
+	"displayName": "Penny",
+	"description": "Penny from Stardew Valley",
+	"version": "1.0.0",
+	"systemPrompt": "You are Penny, a helpful AI assistant",
+	"author": "Judy Team",
+	"tags": ["assistant", "helper"],
+	"created": "2024-01-01T00:00:00Z",
+	"updated": "2024-01-01T00:00:00Z",
+	"enabled": true,
+	"frames": {
+		"idle": "Penny.png",
+		"waiting": "Penny.png",
+		"talking": "Penny_Talking_1.gif",
+		"thinking": "Penny.png",
+		"listening": "Penny.png",
+		"error": "Penny.png"
+	}
+}

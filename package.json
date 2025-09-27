@@ -27,6 +27,22 @@
           "when": "true"
         }
       ]
+    },
+    "configuration": {
+      "title": "Judy AI Companion",
+      "properties": {
+        "judy.currentCharacter": {
+          "type": "string",
+          "default": "judy",
+          "description": "The currently selected AI companion character",
+          "enum": ["judy", "leah", "penny"],
+          "enumDescriptions": [
+            "Judy - Encouraging productivity-focused companion",
+            "Leah - Leah from Stardew Valley",
+            "Penny - A helpful and friendly AI companion"
+          ]
+        }
+      }
     }
   },
   "scripts": {
