@@ -1,21 +1,19 @@
 {
-  "id": "leah",
-  "name": "leah",
-  "displayName": "Leah",
-  "description": "Leah from Stardew Valley",
-  "version": "1.0.0",
-  "systemPrompt": "You are Leah, a helpful AI assistant.",
-  "author": "Judy Team",
-  "tags": ["assistant", "helper"],
-  "created": "2024-01-01T00:00:00Z",
-  "updated": "2024-01-01T00:00:00Z",
-  "enabled": true,
-  "frames": {
-    "idle": "idle.png",
-    "waiting": "waiting.png",
-    "talking": "talking.png",
-    "thinking": "thinking.png",
-    "listening": "listening.png",
-    "error": "error.png"
-  }
+	"id": "leah",
+	"name": "leah",
+	"displayName": "Leah",
+	"description": "Leah from Stardew Valley",
+	"version": "1.0.0",
+	"systemPrompt": "You are Leah, a helpful AI assistant.",
+	"author": "Judy Team",
+	"tags": ["assistant", "helper"],
+	"created": "2024-01-01T00:00:00Z",
+	"updated": "2024-01-01T00:00:00Z",
+	"enabled": true,
+	"frames": {
+		"default": "Leah.png",
+		"happy": "Leah_Happy.png",
+		"talking": "talking.png",
+		"thinking": "thinking.png"
+	}
 }

@@ -12,13 +12,17 @@
             <select class="character-selector" id="characterSelector">
                 <option value="">Loading characters...</option>
             </select>
+            <button class="pet-button" id="petButton" title="Pet the avatar">👋</button>
             <select class="state-selector" id="stateSelector">
-                <option value="idle">Idle</option>
+                <option value="default">Default</option>
+                <option value="happy">Happy</option>
                 <option value="talking">Talking</option>
+                <option value="thinking">Thinking</option>
             </select>
         </div>
 
         <div class="avatar-display">
+            <div class="tooltip" id="heartTooltip">❤️</div>
             <img class="avatar-image" id="avatarImage" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==" alt="Avatar" />
         </div>
     </div>

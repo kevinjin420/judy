@@ -27,6 +27,7 @@ html, body {
     padding: 8px 0;
     border-bottom: 1px solid var(--vscode-panel-border);
     flex-shrink: 0;
+    gap: 8px;
 }
 
 .character-selector {
@@ -60,6 +61,69 @@ html, body {
     min-height: 0;
 }
 
+.offset-info {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    color: var(--vscode-descriptionForeground);
+    padding: 2px 4px;
+    border-radius: 3px;
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pet-button {
+    background: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border);
+    color: var(--vscode-button-foreground);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pet-button:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+.pet-button:active {
+    background: var(--vscode-button-activeBackground);
+}
+
+.avatar-display {
+    position: relative;
+}
+
+.tooltip {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 16px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.tooltip.show {
+    opacity: 1;
+    visibility: visible;
+}
+
 .avatar-image {
     width: 100%;
     height: 100%;
@@ -67,4 +131,9 @@ html, body {
     max-height: 100%;
     flex-shrink: 0;
     object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.avatar-image.flipped {
+    transform: scaleX(-1);
 }

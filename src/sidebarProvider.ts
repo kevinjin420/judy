@@ -8,11 +8,9 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'judySidebar';
     private _view?: vscode.WebviewView;
     private _avatarManager: AvatarManager;
-    private _cursorChangeListener?: vscode.Disposable;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._avatarManager = new AvatarManager(this._extensionUri);
-        this._setupCursorTracking();
     }
 
     public resolveWebviewView(
@@ -35,6 +33,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
         // Send initial data to webview
         this._sendCharactersToWebview();
+        this._sendSidebarLocation();
     }
 
     private async _handleWebviewMessage(message: any) {
@@ -60,13 +59,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 this._updateAvatarState(message.state as AvatarState);
                 break;
 
-            case 'avatarPosition':
-                this._handleAvatarPosition(message);
-                break;
 
-            case 'requestCursorPosition':
-                this._sendCursorPosition();
-                break;
 
             default:
                 console.warn('Unknown message type:', message.type);
@@ -74,7 +67,9 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _sendCharactersToWebview() {
-        if (!this._view) return;
+        if (!this._view) {
+            return;
+        }
 
         const characters = this._avatarManager.getCharacterList();
         this._view.webview.postMessage({
@@ -88,7 +83,9 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _sendCharacterToWebview() {
-        if (!this._view || !this._avatarManager.currentCharacter) return;
+        if (!this._view || !this._avatarManager.currentCharacter) {
+            return;
+        }
 
         const frameMap = this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id);
 
@@ -100,7 +97,9 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _sendFrameMap(characterId: string) {
-        if (!this._view) return;
+        if (!this._view) {
+            return;
+        }
 
         const frameMap = this._avatarManager.getFrameMap(characterId);
 
@@ -112,7 +111,9 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _sendFrameImage(characterId: string, frameName: string) {
-        if (!this._view) return;
+        if (!this._view) {
+            return;
+        }
 
         try {
             const framePath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'frames', frameName);
@@ -146,17 +147,33 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             });
         } catch (error) {
             console.error('Error loading frame image:', error);
-            // Send a minimal transparent PNG as final fallback
-            const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
-            this._view.webview.postMessage({
-                type: 'frameImage',
-                imageUrl: fallbackImage
-            });
+            try {
+                // Try to use the same default.png fallback
+                const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
+                const defaultData = fs.readFileSync(defaultPath);
+                const base64Data = defaultData.toString('base64');
+                const imageUrl = `data:image/png;base64,${base64Data}`;
+
+                this._view.webview.postMessage({
+                    type: 'frameImage',
+                    imageUrl: imageUrl
+                });
+            } catch (fallbackError) {
+                console.error('Error loading default fallback image:', fallbackError);
+                // Send a minimal transparent PNG as final fallback
+                const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
+                this._view.webview.postMessage({
+                    type: 'frameImage',
+                    imageUrl: fallbackImage
+                });
+            }
         }
     }
 
     private _updateAvatarState(state: AvatarState) {
-        if (!this._view) return;
+        if (!this._view) {
+            return;
+        } 
 
         this._avatarManager.setState(state);
 
@@ -202,56 +219,21 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         return htmlContent;
     }
 
-    private _setupCursorTracking() {
-        this._cursorChangeListener = vscode.window.onDidChangeTextEditorSelection(() => {
-            this._sendCursorPosition();
+    private _sendSidebarLocation() {
+        if (!this._view) {
+            return;
+        }
+
+        const sidebarLocation = vscode.workspace.getConfiguration('workbench').get('sideBar.location', 'left');
+
+        this._view.webview.postMessage({
+            type: 'sidebarLocation',
+            location: sidebarLocation
         });
     }
 
-    private _sendCursorPosition() {
-        if (!this._view) return;
 
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const position = editor.selection.active;
-            this._view.webview.postMessage({
-                type: 'cursorPosition',
-                line: position.line,
-                character: position.character
-            });
-        }
-    }
-
-    private _handleAvatarPosition(message: any) {
-        if (!this._view) return;
-
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const cursorPos = editor.selection.active;
-
-            // Calculate offset between cursor and avatar
-            const offset = {
-                cursorLine: cursorPos.line,
-                cursorCharacter: cursorPos.character,
-                avatarX: message.x,
-                avatarY: message.y,
-                avatarWidth: message.width,
-                avatarHeight: message.height,
-                offsetX: message.x, // For now, just store avatar position
-                offsetY: message.y
-            };
-
-            console.log('Cursor-Avatar Offset:', offset);
-
-            // Send offset data back to webview
-            this._view.webview.postMessage({
-                type: 'offsetCalculated',
-                offset: offset
-            });
-        }
-    }
 
     public dispose() {
-        this._cursorChangeListener?.dispose();
     }
 }

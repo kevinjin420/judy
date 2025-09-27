@@ -1,75 +1,79 @@
 {
-  "name": "judy",
-  "displayName": "judy",
-  "description": "AI Companion to help you lock in",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.104.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "judy.helloWorld",
-        "title": "Hello World"
-      }
-    ],
-    "views": {
-      "explorer": [
-        {
-          "id": "judySidebar",
-          "name": "Judy AI Companion",
-          "type": "webview",
-          "when": "true"
-        }
-      ]
-    },
-    "configuration": {
-      "title": "Judy AI Companion",
-      "properties": {
-        "judy.currentCharacter": {
-          "type": "string",
-          "default": "judy",
-          "description": "The currently selected AI companion character",
-          "enum": ["judy", "leah", "penny"],
-          "enumDescriptions": [
-            "Judy - Encouraging productivity-focused companion",
-            "Leah - Leah from Stardew Valley",
-            "Penny - A helpful and friendly AI companion"
-          ]
-        }
-      }
-    }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "@types/vscode": "^1.104.0",
-    "@typescript-eslint/eslint-plugin": "^8.42.0",
-    "@typescript-eslint/parser": "^8.42.0",
-    "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.34.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "@elevenlabs/elevenlabs-js": "^2.16.0",
-    "@google/genai": "^1.21.0",
-    "@google/generative-ai": "^0.24.1",
-    "dotenv": "^17.2.2",
-    "openai": "^5.23.1"
-  }
+	"name": "judy",
+	"displayName": "judy",
+	"description": "AI Companion to help you lock in",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.104.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "judy.helloWorld",
+				"title": "Hello World"
+			}
+		],
+		"views": {
+			"explorer": [
+				{
+					"id": "judySidebar",
+					"name": "Judy",
+					"type": "webview",
+					"when": "true"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Judy",
+			"properties": {
+				"judy.currentCharacter": {
+					"type": "string",
+					"default": "judy",
+					"description": "The currently selected AI companion character",
+					"enum": [
+						"judy",
+						"leah",
+						"penny"
+					],
+					"enumDescriptions": [
+						"Judy - Encouraging productivity-focused companion",
+						"Leah - Leah from Stardew Valley",
+						"Penny - A helpful and friendly AI companion"
+					]
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src",
+		"test": "vscode-test"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.10",
+		"@types/node": "22.x",
+		"@types/vscode": "^1.104.0",
+		"@typescript-eslint/eslint-plugin": "^8.42.0",
+		"@typescript-eslint/parser": "^8.42.0",
+		"@vscode/test-cli": "^0.0.11",
+		"@vscode/test-electron": "^2.5.2",
+		"eslint": "^9.34.0",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.9.2"
+	},
+	"dependencies": {
+		"@elevenlabs/elevenlabs-js": "^2.16.0",
+		"@google/genai": "^1.21.0",
+		"@google/generative-ai": "^0.24.1",
+		"dotenv": "^17.2.2",
+		"openai": "^5.23.1"
+	}
 }
