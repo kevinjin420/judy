@@ -106,31 +106,42 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
         try {
             const framePath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'frames', frameName);
+            let imageData: Buffer;
+            let mimeType = 'image/png';
 
             if (fs.existsSync(framePath)) {
-                const frameData = fs.readFileSync(framePath);
-                const base64Data = frameData.toString('base64');
+                imageData = fs.readFileSync(framePath);
 
                 // Determine MIME type based on file extension
                 const ext = path.extname(frameName).toLowerCase();
-                let mimeType = 'image/png';
                 if (ext === '.gif') {
                     mimeType = 'image/gif';
                 } else if (ext === '.jpg' || ext === '.jpeg') {
                     mimeType = 'image/jpeg';
                 }
-
-                const imageUrl = `data:${mimeType};base64,${base64Data}`;
-
-                this._view.webview.postMessage({
-                    type: 'frameImage',
-                    imageUrl: imageUrl
-                });
             } else {
-                console.warn(`Frame image not found: ${framePath}`);
+                // Fallback to default blank PNG
+                console.warn(`Frame image not found: ${framePath}, using default fallback`);
+                const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
+                imageData = fs.readFileSync(defaultPath);
+                mimeType = 'image/png';
             }
+
+            const base64Data = imageData.toString('base64');
+            const imageUrl = `data:${mimeType};base64,${base64Data}`;
+
+            this._view.webview.postMessage({
+                type: 'frameImage',
+                imageUrl: imageUrl
+            });
         } catch (error) {
             console.error('Error loading frame image:', error);
+            // Send a minimal transparent PNG as final fallback
+            const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
+            this._view.webview.postMessage({
+                type: 'frameImage',
+                imageUrl: fallbackImage
+            });
         }
     }
 
@@ -166,7 +177,18 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
     private _getHtmlForWebview(webview: vscode.Webview) {
         const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'webview.html');
-        const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+        const cssPath = path.join(this._extensionUri.fsPath, 'src', 'webview.css');
+        const jsPath = path.join(this._extensionUri.fsPath, 'src', 'webview.js');
+
+        // Create URIs for CSS and JS files
+        const cssUri = webview.asWebviewUri(vscode.Uri.file(cssPath));
+        const jsUri = webview.asWebviewUri(vscode.Uri.file(jsPath));
+
+        // Read HTML and replace placeholders
+        let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+        htmlContent = htmlContent.replace('{{CSS_URI}}', cssUri.toString());
+        htmlContent = htmlContent.replace('{{JS_URI}}', jsUri.toString());
+
         return htmlContent;
     }
 }
