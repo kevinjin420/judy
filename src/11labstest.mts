@@ -4,6 +4,8 @@ import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+let voiceId = 'wJqPPQ618aTW29mptyoc'; // Judy default voice id
+
 // Recreate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,11 +35,14 @@ function streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
     };
 }
 
+function updatevoice(voiceId: string) {
+    voiceId = voiceId;
+}
+
 /**
  * Speak text using ElevenLabs TTS
  */
 export async function speak(input: string) {
-    const voiceId = 'kdmDKE6EkgrWrrykO9Qt'; // hard-coded for now
 
     const audio = await elevenlabs.textToSpeech.convert(voiceId, {
         text: input,

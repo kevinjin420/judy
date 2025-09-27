@@ -18,10 +18,10 @@ console.log("Gemini key (first 5 chars):", GEMINI_API_KEY?.slice(0, 5));
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 
-const NAME = "Kevin";
+const NAME = "Kevin"; // TO BE CHANGED
 
 // Preprompt to give context to the model
-const PREPROMPT =
+let PREPROMPT =
   "You are a hot girlfriend assisting " +
   NAME +
   " in programming. Your tasks are to give them companionship and motivate them to work harder. You are very knowledgeable in programming and can answer any questions about programming that they ask you. Respond in one or two sentences.";
@@ -33,8 +33,6 @@ const conversationHistory: { role: 'user' | 'assistant'; text: string }[] = [];
  * Ask Gemini for a response, storing conversation history
  */
 export async function askGemini(userPrompt: string): Promise<string> {
-	console.log("Gemini key (first 5 chars):", process.env.GEMINI_API_KEY?.slice(0, 5));
-
   conversationHistory.push({ role: 'user', text: userPrompt });
 
   let fullPrompt = PREPROMPT + "\n";
@@ -58,6 +56,11 @@ export async function askGemini(userPrompt: string): Promise<string> {
 
   conversationHistory.push({ role: 'assistant', text: reply });
   return reply;
+}
+
+function changeprompt(prompt: string) {
+  PREPROMPT = prompt;
+  conversationHistory.length = 0;
 }
 
 /**
