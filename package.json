@@ -17,7 +17,17 @@
         "command": "judy.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "judySidebar",
+          "name": "Judy AI Companion",
+          "type": "webview",
+          "when": "true"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
