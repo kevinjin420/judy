@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AvatarManager } from './avatars/components/avatarManager.js';
 import { AvatarState, Character } from './avatars/types/avatar.js';
+import { MotivationSystem } from './motivationSystem.js';
 import "dotenv/config";
 import { askGemini } from './llmcall.mjs';
 import { speak } from './11labstest.mjs';
@@ -11,6 +12,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'judySidebar';
     private _view?: vscode.WebviewView;
     private _avatarManager: AvatarManager;
+    private _motivationSystem?: MotivationSystem;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._avatarManager = new AvatarManager(this._extensionUri);
@@ -69,17 +71,61 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 const userMsg = message.text;
                 console.log('Chat message received:', userMsg);
 
+                // Set to thinking state while waiting for LLM response
+                this._updateAvatarState('thinking' as AvatarState);
+
                 const responseText = await askGemini(userMsg);
 
                 this._view?.webview.postMessage({
                     type: 'chatResponse',
                     text: responseText
                 });
-                await speak(responseText);
+
+                // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
+                const estimatedDuration = Math.max(2000, (responseText.length / 5 / 150) * 60 * 1000);
+
+                // Start talking animation and speech simultaneously
+                const [, ] = await Promise.all([
+                    this._animateTalking(estimatedDuration),
+                    speak(responseText)
+                ]);
+                break;
+
+            case 'motivationMessage':
+                console.log('Motivation message triggered from webview');
+
+                // Set to thinking state while waiting for LLM response
+                this._updateAvatarState('thinking' as AvatarState);
+
+                // Get session stats for LLM prompt
+                const stats = this._motivationSystem?.getStats();
+                const sessionMinutes = stats?.sessionMinutes || 0;
+                const charactersTyped = stats?.charactersTyped || 0;
+
+                const motivationPrompt = `The user has been coding for ${sessionMinutes} minutes and has typed ${charactersTyped} characters in this session. Please provide a brief, encouraging motivational message to keep them going. Be positive and supportive.`;
+
+                const motivationResponse = await askGemini(motivationPrompt);
+
+                this._view?.webview.postMessage({
+                    type: 'chatResponse',
+                    text: motivationResponse
+                });
+
+                // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
+                const motivationDuration = Math.max(2000, (motivationResponse.length / 5 / 150) * 60 * 1000);
+
+                // Start talking animation and speech simultaneously
+                await Promise.all([
+                    this._animateTalking(motivationDuration),
+                    speak(motivationResponse)
+                ]);
                 break;
 
             case 'petMessage':
                 console.log('Pet message received for character:', message.characterId);
+
+                // Set to thinking state while waiting for LLM response
+                this._updateAvatarState('thinking' as AvatarState);
 
                 // Get character-specific pet response
                 const character = this._avatarManager.currentCharacter;
@@ -90,7 +136,15 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                     type: 'chatResponse',
                     text: petResponse
                 });
-                await speak(petResponse);
+
+                // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
+                const petDuration = Math.max(2000, (petResponse.length / 5 / 150) * 60 * 1000);
+
+                // Start talking animation and speech simultaneously
+                await Promise.all([
+                    this._animateTalking(petDuration),
+                    speak(petResponse)
+                ]);
                 break;
 
             default:
@@ -220,6 +274,55 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    private _animateFrames(delayMs: number, states: AvatarState[], shouldLoop: boolean, durationMs?: number): Promise<void> {
+        return new Promise((resolve) => {
+            if (!this._view || states.length === 0) {
+                resolve();
+                return;
+            }
+
+            let currentFrameIndex = 0;
+            const startTime = Date.now();
+
+            const interval = setInterval(() => {
+                // Check if we should stop (for timed animations)
+                if (durationMs) {
+                    const elapsed = Date.now() - startTime;
+                    if (elapsed >= durationMs) {
+                        clearInterval(interval);
+                        // Return to default state when done
+                        this._updateAvatarState('default' as AvatarState);
+                        resolve();
+                        return;
+                    }
+                }
+
+                // Update to current frame
+                this._updateAvatarState(states[currentFrameIndex]);
+
+                // Move to next frame
+                currentFrameIndex++;
+
+                if (currentFrameIndex >= states.length) {
+                    if (shouldLoop || durationMs) {
+                        // Reset to beginning if looping or if we have a duration
+                        currentFrameIndex = 0;
+                    } else {
+                        // Stop animation if not looping and no duration
+                        clearInterval(interval);
+                        resolve();
+                        return;
+                    }
+                }
+            }, delayMs);
+        });
+    }
+
+    private _animateTalking(durationMs: number): Promise<void> {
+        const talkingStates: AvatarState[] = ['default' as AvatarState, 'talking' as AvatarState];
+        return this._animateFrames(500, talkingStates, true, durationMs);
+    }
+
     // Public methods for external use
     public setAvatarState(state: AvatarState) {
         this._updateAvatarState(state);
@@ -260,6 +363,26 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         this._view.webview.postMessage({
             type: 'sidebarLocation',
             location: sidebarLocation
+        });
+    }
+
+    public setMotivationSystem(motivationSystem: MotivationSystem) {
+        this._motivationSystem = motivationSystem;
+
+        // Subscribe to motivation messages
+        motivationSystem.onMotivationCallback((message: string) => {
+            this._sendMotivationToWebview(message);
+        });
+    }
+
+    private _sendMotivationToWebview(message: string) {
+        if (!this._view) {
+            return;
+        }
+
+        this._view.webview.postMessage({
+            type: 'chatResponse',
+            text: message
         });
     }
 

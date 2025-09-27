@@ -11,6 +11,7 @@ const characterSelector = document.getElementById("characterSelector");
 const avatarImage = document.getElementById("avatarImage");
 const stateSelector = document.getElementById("stateSelector");
 const petButton = document.getElementById("petButton");
+const debugButton = document.getElementById("debugButton");
 const heartTooltip = document.getElementById("heartTooltip");
 
 // Current frame map
@@ -80,7 +81,6 @@ stateSelector.addEventListener("change", (e) => {
 	}
 });
 
-
 // Pet button functionality
 petButton.addEventListener("click", () => {
 	console.log("Avatar petted!");
@@ -89,8 +89,16 @@ petButton.addEventListener("click", () => {
 
 	// Send pet message to LLM
 	vscode.postMessage({
-		type: 'petMessage',
-		characterId: state.selectedCharacter
+		type: "petMessage",
+		characterId: state.selectedCharacter,
+	});
+});
+
+// Debug button functionality
+debugButton.addEventListener("click", () => {
+	console.log("Motivation message triggered!");
+	vscode.postMessage({
+		type: "motivationMessage"
 	});
 });
 
@@ -118,12 +126,12 @@ function switchToHappyState() {
 
 // Handle sidebar location changes
 function handleSidebarLocation(location) {
-	console.log('Sidebar location:', location);
+	console.log("Sidebar location:", location);
 
-	if (location === 'left') {
-		avatarImage.classList.add('flipped');
+	if (location === "left") {
+		avatarImage.classList.add("flipped");
 	} else {
-		avatarImage.classList.remove('flipped');
+		avatarImage.classList.remove("flipped");
 	}
 }
 
@@ -186,6 +194,7 @@ window.addEventListener("message", (event) => {
 			handleSidebarLocation(message.location);
 			break;
 
+
 		case "error":
 			updateAvatarState("error");
 			break;
@@ -196,44 +205,46 @@ window.addEventListener("message", (event) => {
 initialize();
 
 // Chatbox elements
-const chatResponse = document.getElementById('chatResponse');
-const chatInput = document.getElementById('chatInput');
+const chatResponse = document.getElementById("chatResponse");
+const chatInput = document.getElementById("chatInput");
 
 // Send message when Enter is pressed
-chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        const message = chatInput.value.trim();
-        if (!message) return;
+chatInput.addEventListener("keydown", (e) => {
+	if (e.key === "Enter") {
+		const message = chatInput.value.trim();
+		if (!message) {
+			return;
+		}
+		// Send message to extension
+		vscode.postMessage({
+			type: "chatMessage",
+			text: message,
+		});
 
-        // Send message to extension
-        vscode.postMessage({
-            type: 'chatMessage',
-            text: message
-        });
-
-        chatInput.value = '';
-    }
+		chatInput.value = "";
+	}
 });
 
-window.addEventListener('message', event => {
-    const message = event.data;
-    console.log("Received message in webview:", message);  // DEBUG
-    if (message.type === 'chatResponse') {
-        chatResponse.textContent = message.text;
-    }
+window.addEventListener("message", (event) => {
+	const message = event.data;
+	console.log("Received message in webview:", message); // DEBUG
+	if (message.type === "chatResponse") {
+		chatResponse.textContent = message.text;
+	}
 });
 
-chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        const message = chatInput.value.trim();
-        if (!message) return;
+chatInput.addEventListener("keydown", (e) => {
+	if (e.key === "Enter") {
+		const message = chatInput.value.trim();
+		if (!message) {
+			return;
+		}
+		console.log("Sending chatMessage to extension:", message); // debug
+		vscode.postMessage({
+			type: "chatMessage",
+			text: message,
+		});
 
-        console.log("Sending chatMessage to extension:", message);  // debug
-        vscode.postMessage({
-            type: 'chatMessage',
-            text: message
-        });
-
-        chatInput.value = '';
-    }
+		chatInput.value = "";
+	}
 });

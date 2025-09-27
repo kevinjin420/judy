@@ -4,9 +4,9 @@
   - certain time spent
   - certain lines of code written
 - keeps tracks of to dos, remind on interval?
-- head pats, integrate with llm
 - level up after certain amount of characters typed
 - git tracker
 - jokes on certain keywords
 - reminder to take a break
-- check for left/right alignment
+- implement setting system that allows the user to configure api keys and voice ids
+- 
