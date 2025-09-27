@@ -1,194 +1,158 @@
+// file: sidebarProvider.ts
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AvatarManager } from './avatars/components/avatarManager';
-import { AvatarState } from './avatars/types/avatar';
+import { AvatarManager } from './avatars/components/avatarManager.js';
+import { askGemini } from './llmcall.mjs';
+import { AvatarState, Character, FrameMap } from './avatars/types/avatar.js';
 
 export class JudySidebarProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'judySidebar';
-    private _view?: vscode.WebviewView;
-    private _avatarManager: AvatarManager;
+  static viewType = 'judySidebar';
+  private _extensionUri: vscode.Uri;
+  private _view?: vscode.WebviewView;
+  private _avatarManager: AvatarManager;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {
-        this._avatarManager = new AvatarManager(this._extensionUri);
-    }
+  constructor(extensionUri: vscode.Uri) {
+    this._extensionUri = extensionUri;
+    this._avatarManager = new AvatarManager(this._extensionUri);
+  }
 
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
-    ) {
-        this._view = webviewView;
+  resolveWebviewView(webviewView: vscode.WebviewView, _context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken) {
+    this._view = webviewView;
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this._extensionUri]
+    };
+    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        webviewView.webview.options = {
-            enableScripts: true,
-            localResourceRoots: [this._extensionUri]
-        };
+    webviewView.webview.onDidReceiveMessage(data => {
+      this._handleWebviewMessage(data);
+    });
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+    // Send initial character list
+    this._sendCharactersToWebview();
+  }
 
-        webviewView.webview.onDidReceiveMessage(data => {
-            this._handleWebviewMessage(data);
-        });
+  private async _handleWebviewMessage(message: any) {
+    console.log('Received message from Webview:', message);
 
-        // Send initial data to webview
+    switch (message.type) {
+      case 'getCharacters':
         this._sendCharactersToWebview();
-    }
+        break;
 
-    private async _handleWebviewMessage(message: any) {
-        switch (message.type) {
-            case 'getCharacters':
-                this._sendCharactersToWebview();
-                break;
+      case 'selectCharacter':
+        await this._avatarManager.switchCharacter(message.characterId);
+        this._sendCharacterToWebview();
+        break;
 
-            case 'selectCharacter':
-                await this._avatarManager.switchCharacter(message.characterId);
-                this._sendCharacterToWebview();
-                break;
+      case 'getFrameMap':
+        this._sendFrameMap(message.characterId);
+        break;
 
-            case 'getFrameMap':
-                this._sendFrameMap(message.characterId);
-                break;
+      case 'getFrameImage':
+        this._sendFrameImage(message.characterId, message.frameName);
+        break;
 
-            case 'getFrameImage':
-                this._sendFrameImage(message.characterId, message.frameName);
-                break;
+      case 'setState':
+        this._updateAvatarState(message.state);
+        break;
 
-            case 'setState':
-                this._updateAvatarState(message.state as AvatarState);
-                break;
+      case 'chatMessage':
+        const userMsg = message.text;
+        console.log('Chat message received:', userMsg);
 
-            default:
-                console.warn('Unknown message type:', message.type);
-        }
-    }
+        const responseText = await askGemini(userMsg);
 
-    private _sendCharactersToWebview() {
-        if (!this._view) return;
-
-        const characters = this._avatarManager.getCharacterList();
-        this._view.webview.postMessage({
-            type: 'charactersLoaded',
-            characters: characters.map(char => ({
-                id: char.id,
-                displayName: char.displayName,
-                description: char.description
-            }))
+        this._view?.webview.postMessage({
+          type: 'chatResponse',
+          text: responseText
         });
+        break;
+
+      default:
+        console.warn('Unknown message type:', message.type);
     }
+  }
 
-    private _sendCharacterToWebview() {
-        if (!this._view || !this._avatarManager.currentCharacter) return;
+  private _sendCharactersToWebview() {
+    if (!this._view) return;
+    const characters = this._avatarManager.getCharacterList();
+    this._view.webview.postMessage({
+      type: 'charactersLoaded',
+      characters: characters.map(char => ({
+        id: char.id,
+        displayName: char.displayName,
+        description: char.description
+      }))
+    });
+  }
 
-        const frameMap = this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id);
+  private _sendCharacterToWebview() {
+    if (!this._view || !this._avatarManager.currentCharacter) return;
+    const frameMap = this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id);
+    this._view.webview.postMessage({
+      type: 'characterSelected',
+      character: this._avatarManager.currentCharacter,
+      frameMap
+    });
+  }
 
-        this._view.webview.postMessage({
-            type: 'characterSelected',
-            character: this._avatarManager.currentCharacter,
-            frameMap: frameMap
-        });
+  private _sendFrameMap(characterId: string) {
+    if (!this._view) return;
+    const frameMap = this._avatarManager.getFrameMap(characterId);
+    this._view.webview.postMessage({ type: 'frameMap', characterId, frameMap });
+  }
+
+  private _sendFrameImage(characterId: string, frameName: string) {
+    if (!this._view) return;
+    try {
+      const framePath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'frames', frameName);
+      let imageData: Buffer;
+      let mimeType = 'image/png';
+
+      if (fs.existsSync(framePath)) {
+        imageData = fs.readFileSync(framePath);
+        const ext = path.extname(frameName).toLowerCase();
+        if (ext === '.gif') mimeType = 'image/gif';
+        else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+      } else {
+        console.warn(`Frame not found: ${framePath}, using fallback`);
+        const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
+        imageData = fs.readFileSync(defaultPath);
+      }
+
+      const base64Data = imageData.toString('base64');
+      const imageUrl = `data:${mimeType};base64,${base64Data}`;
+      this._view.webview.postMessage({ type: 'frameImage', imageUrl });
+    } catch (err) {
+      console.error('Error loading frame image:', err);
     }
+  }
 
-    private _sendFrameMap(characterId: string) {
-        if (!this._view) return;
+  private _updateAvatarState(state: string) {
+    if (!this._view) return;
+    this._avatarManager.setState(state as AvatarState);
 
-        const frameMap = this._avatarManager.getFrameMap(characterId);
+    const frameMap = this._avatarManager.currentCharacter
+      ? this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id)
+      : null;
 
-        this._view.webview.postMessage({
-            type: 'frameMap',
-            characterId: characterId,
-            frameMap: frameMap
-        });
-    }
+    this._view.webview.postMessage({ type: 'stateChanged', state, frameMap });
+  }
 
-    private _sendFrameImage(characterId: string, frameName: string) {
-        if (!this._view) return;
+  private _getHtmlForWebview(webview: vscode.Webview): string {
+    const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'webview.html');
+    const cssPath = path.join(this._extensionUri.fsPath, 'src', 'webview.css');
+    const jsPath = path.join(this._extensionUri.fsPath, 'src', 'webview.js');
 
-        try {
-            const framePath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'frames', frameName);
-            let imageData: Buffer;
-            let mimeType = 'image/png';
+    const cssUri = webview.asWebviewUri(vscode.Uri.file(cssPath));
+    const jsUri = webview.asWebviewUri(vscode.Uri.file(jsPath));
 
-            if (fs.existsSync(framePath)) {
-                imageData = fs.readFileSync(framePath);
+    let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    htmlContent = htmlContent.replace('{{CSS_URI}}', cssUri.toString());
+    htmlContent = htmlContent.replace('{{JS_URI}}', jsUri.toString());
 
-                // Determine MIME type based on file extension
-                const ext = path.extname(frameName).toLowerCase();
-                if (ext === '.gif') {
-                    mimeType = 'image/gif';
-                } else if (ext === '.jpg' || ext === '.jpeg') {
-                    mimeType = 'image/jpeg';
-                }
-            } else {
-                // Fallback to default blank PNG
-                console.warn(`Frame image not found: ${framePath}, using default fallback`);
-                const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
-                imageData = fs.readFileSync(defaultPath);
-                mimeType = 'image/png';
-            }
-
-            const base64Data = imageData.toString('base64');
-            const imageUrl = `data:${mimeType};base64,${base64Data}`;
-
-            this._view.webview.postMessage({
-                type: 'frameImage',
-                imageUrl: imageUrl
-            });
-        } catch (error) {
-            console.error('Error loading frame image:', error);
-            // Send a minimal transparent PNG as final fallback
-            const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
-            this._view.webview.postMessage({
-                type: 'frameImage',
-                imageUrl: fallbackImage
-            });
-        }
-    }
-
-    private _updateAvatarState(state: AvatarState) {
-        if (!this._view) return;
-
-        this._avatarManager.setState(state);
-
-        const frameMap = this._avatarManager.currentCharacter
-            ? this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id)
-            : null;
-
-        this._view.webview.postMessage({
-            type: 'stateChanged',
-            state: state,
-            frameMap: frameMap
-        });
-    }
-
-
-    // Public methods for external use
-    public setAvatarState(state: AvatarState) {
-        this._updateAvatarState(state);
-    }
-
-    public getCurrentCharacter() {
-        return this._avatarManager.currentCharacter;
-    }
-
-    public getAvatarManager() {
-        return this._avatarManager;
-    }
-
-    private _getHtmlForWebview(webview: vscode.Webview) {
-        const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'webview.html');
-        const cssPath = path.join(this._extensionUri.fsPath, 'src', 'webview.css');
-        const jsPath = path.join(this._extensionUri.fsPath, 'src', 'webview.js');
-
-        // Create URIs for CSS and JS files
-        const cssUri = webview.asWebviewUri(vscode.Uri.file(cssPath));
-        const jsUri = webview.asWebviewUri(vscode.Uri.file(jsPath));
-
-        // Read HTML and replace placeholders
-        let htmlContent = fs.readFileSync(htmlPath, 'utf8');
-        htmlContent = htmlContent.replace('{{CSS_URI}}', cssUri.toString());
-        htmlContent = htmlContent.replace('{{JS_URI}}', jsUri.toString());
-
-        return htmlContent;
-    }
+    return htmlContent;
+  }
 }

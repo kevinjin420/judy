@@ -126,3 +126,46 @@ window.addEventListener('message', event => {
 
 // Initialize the interface
 initialize();
+
+// Chatbox elements
+const chatResponse = document.getElementById('chatResponse');
+const chatInput = document.getElementById('chatInput');
+
+// Send message when Enter is pressed
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        // Send message to extension
+        vscode.postMessage({
+            type: 'chatMessage',
+            text: message
+        });
+
+        chatInput.value = '';
+    }
+});
+
+window.addEventListener('message', event => {
+    const message = event.data;
+    console.log("Received message in webview:", message);  // DEBUG
+    if (message.type === 'chatResponse') {
+        chatResponse.textContent = message.text;
+    }
+});
+
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        console.log("Sending chatMessage to extension:", message);  // debug
+        vscode.postMessage({
+            type: 'chatMessage',
+            text: message
+        });
+
+        chatInput.value = '';
+    }
+});
