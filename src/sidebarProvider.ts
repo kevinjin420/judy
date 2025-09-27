@@ -8,9 +8,11 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'judySidebar';
     private _view?: vscode.WebviewView;
     private _avatarManager: AvatarManager;
+    private _cursorChangeListener?: vscode.Disposable;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._avatarManager = new AvatarManager(this._extensionUri);
+        this._setupCursorTracking();
     }
 
     public resolveWebviewView(
@@ -56,6 +58,14 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
             case 'setState':
                 this._updateAvatarState(message.state as AvatarState);
+                break;
+
+            case 'avatarPosition':
+                this._handleAvatarPosition(message);
+                break;
+
+            case 'requestCursorPosition':
+                this._sendCursorPosition();
                 break;
 
             default:
@@ -190,5 +200,58 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         htmlContent = htmlContent.replace('{{JS_URI}}', jsUri.toString());
 
         return htmlContent;
+    }
+
+    private _setupCursorTracking() {
+        this._cursorChangeListener = vscode.window.onDidChangeTextEditorSelection(() => {
+            this._sendCursorPosition();
+        });
+    }
+
+    private _sendCursorPosition() {
+        if (!this._view) return;
+
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            const position = editor.selection.active;
+            this._view.webview.postMessage({
+                type: 'cursorPosition',
+                line: position.line,
+                character: position.character
+            });
+        }
+    }
+
+    private _handleAvatarPosition(message: any) {
+        if (!this._view) return;
+
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            const cursorPos = editor.selection.active;
+
+            // Calculate offset between cursor and avatar
+            const offset = {
+                cursorLine: cursorPos.line,
+                cursorCharacter: cursorPos.character,
+                avatarX: message.x,
+                avatarY: message.y,
+                avatarWidth: message.width,
+                avatarHeight: message.height,
+                offsetX: message.x, // For now, just store avatar position
+                offsetY: message.y
+            };
+
+            console.log('Cursor-Avatar Offset:', offset);
+
+            // Send offset data back to webview
+            this._view.webview.postMessage({
+                type: 'offsetCalculated',
+                offset: offset
+            });
+        }
+    }
+
+    public dispose() {
+        this._cursorChangeListener?.dispose();
     }
 }

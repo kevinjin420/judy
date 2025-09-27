@@ -11,6 +11,9 @@ const stateSelector = document.getElementById('stateSelector');
 // Current frame map
 let currentFrameMap = null;
 
+// Position tracking
+let currentCursorPosition = null;
+
 // Initialize
 function initialize() {
     vscode.postMessage({ type: 'getCharacters' });
@@ -70,6 +73,28 @@ stateSelector.addEventListener('change', (e) => {
     }
 });
 
+// Track avatar position when it loads or changes
+avatarImage.addEventListener('load', () => {
+    sendAvatarPosition();
+});
+
+// Send avatar position to extension
+function sendAvatarPosition() {
+    const rect = avatarImage.getBoundingClientRect();
+    vscode.postMessage({
+        type: 'avatarPosition',
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+    });
+}
+
+// Request cursor position on click
+avatarImage.addEventListener('click', () => {
+    vscode.postMessage({ type: 'requestCursorPosition' });
+});
+
 // Handle messages from extension
 window.addEventListener('message', event => {
     const message = event.data;
@@ -118,11 +143,49 @@ window.addEventListener('message', event => {
             avatarImage.src = message.imageUrl;
             break;
 
+        case 'cursorPosition':
+            currentCursorPosition = message;
+            console.log('Cursor position:', message.line, message.character);
+            break;
+
+        case 'offsetCalculated':
+            console.log('Offset data:', message.offset);
+            displayOffsetInfo(message.offset);
+            break;
+
         case 'error':
             updateAvatarState('error');
             break;
     }
 });
+
+// Display offset information
+function displayOffsetInfo(offset) {
+    // Create or update info display
+    let infoDiv = document.getElementById('offsetInfo');
+    if (!infoDiv) {
+        infoDiv = document.createElement('div');
+        infoDiv.id = 'offsetInfo';
+        infoDiv.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            padding: 8px;
+            font-size: 10px;
+            border-radius: 4px;
+            max-width: 200px;
+        `;
+        document.body.appendChild(infoDiv);
+    }
+
+    infoDiv.innerHTML = `
+        <div>Cursor: L${offset.cursorLine} C${offset.cursorCharacter}</div>
+        <div>Avatar: ${Math.round(offset.avatarX)}, ${Math.round(offset.avatarY)}</div>
+        <div>Size: ${Math.round(offset.avatarWidth)}x${Math.round(offset.avatarHeight)}</div>
+    `;
+}
 
 // Initialize the interface
 initialize();
