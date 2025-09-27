@@ -36,7 +36,11 @@
           "type": "string",
           "default": "judy",
           "description": "The currently selected AI companion character",
-          "enum": ["judy", "leah", "penny"],
+          "enum": [
+            "judy",
+            "leah",
+            "penny"
+          ],
           "enumDescriptions": [
             "Judy - Encouraging productivity-focused companion",
             "Leah - Leah from Stardew Valley",
@@ -71,6 +75,7 @@
     "@google/genai": "^1.21.0",
     "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.2.2",
+    "ffmpeg": "^0.0.4",
     "openai": "^5.23.1"
   }
 }

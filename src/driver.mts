@@ -30,6 +30,7 @@ export async function runDriver(prompt: string) {
     console.log("Gemini says:\n", text);
 
     await speak(text);
+	return text;
 }
 
 // Example usage from CLI

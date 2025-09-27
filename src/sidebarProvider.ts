@@ -5,6 +5,12 @@ import * as path from 'path';
 import { AvatarManager } from './avatars/components/avatarManager.js';
 import { askGemini } from './llmcall.mjs';
 import { AvatarState, Character, FrameMap } from './avatars/types/avatar.js';
+// sidebarProvider.ts (or main extension entry)
+import "dotenv/config";
+import { runDriver } from './driver.mjs';
+import { speak } from './11labstest.mjs';
+
+
 
 export class JudySidebarProvider implements vscode.WebviewViewProvider {
   static viewType = 'judySidebar';
@@ -65,9 +71,10 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         const responseText = await askGemini(userMsg);
 
         this._view?.webview.postMessage({
-          type: 'chatResponse',
-          text: responseText
+			type: 'chatResponse',
+			text: responseText
         });
+		await speak(responseText);
         break;
 
       default:

@@ -1,6 +1,15 @@
 // file: 11labstest.mts
 import { ElevenLabsClient, play } from '@elevenlabs/elevenlabs-js';
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Recreate __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from project root
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 const elevenlabs = new ElevenLabsClient();
 
@@ -24,12 +33,11 @@ function streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
     };
 }
 
-
 /**
  * Speak text using ElevenLabs TTS
  */
 export async function speak(input: string) {
-    const voiceId = 'O4cGUVdAocn0z4EpQ9yF'; // hard-coded for now
+    const voiceId = 'kdmDKE6EkgrWrrykO9Qt'; // hard-coded for now
 
     const audio = await elevenlabs.textToSpeech.convert(voiceId, {
         text: input,

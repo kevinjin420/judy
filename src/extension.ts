@@ -2,8 +2,9 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { JudySidebarProvider } from './sidebarProvider.js';
-
-
+import * as dotenv from "dotenv";
+dotenv.config();
+console.log("Gemini key (first 5 chars):", process.env.GEMINI_API_KEY?.slice(0, 5));
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
