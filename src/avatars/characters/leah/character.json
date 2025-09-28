@@ -13,8 +13,7 @@
 	"frames": {
 		"default": "Leah.png",
 		"happy": "Leah_Happy.png",
-		"talking": "Leah_Talking.gif",
-		"thinking": "Leah_Thinking.gif",
-		"idle": "Leah_Idle.gif"
+		"talking": "Leah_Talking.png",
+		"thinking": "Leah.png"
 	}
 }

@@ -13,7 +13,7 @@
 	"frames": {
 		"default": "Penny.png",
 		"happy": "Penny_Happy.png",
-		"talking": "talking.png",
-		"thinking": "thinking.png"
+		"talking": "Penny_Talking.png",
+		"thinking": "Penny.png"
 	}
 }
