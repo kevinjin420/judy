@@ -9,9 +9,8 @@ const state = vscode.getState() || {
 // DOM elements
 const characterSelector = document.getElementById("characterSelector");
 const avatarImage = document.getElementById("avatarImage");
-const stateSelector = document.getElementById("stateSelector");
+const stateDisplay = document.getElementById("stateDisplay");
 const petButton = document.getElementById("petButton");
-const debugButton = document.getElementById("debugButton");
 const heartTooltip = document.getElementById("heartTooltip");
 
 // Current frame map
@@ -48,8 +47,8 @@ function updateCharacterDisplay(character) {
 
 // Update avatar state
 function updateAvatarState(newState, frameMap) {
-	// Update dropdown selection
-	stateSelector.value = newState;
+	// Update state display
+	stateDisplay.textContent = newState.charAt(0).toUpperCase() + newState.slice(1);
 
 	// Load the frame for this state
 	if (frameMap && frameMap[newState] && state.selectedCharacter) {
@@ -75,11 +74,6 @@ characterSelector.addEventListener("change", (e) => {
 	}
 });
 
-stateSelector.addEventListener("change", (e) => {
-	if (e.target.value) {
-		vscode.postMessage({ type: "setState", state: e.target.value });
-	}
-});
 
 // Pet button functionality
 petButton.addEventListener("click", () => {
@@ -93,13 +87,6 @@ petButton.addEventListener("click", () => {
 	});
 });
 
-// Debug button functionality
-debugButton.addEventListener("click", () => {
-	console.log("Motivation message triggered!");
-	vscode.postMessage({
-		type: "motivationMessage"
-	});
-});
 
 function showHeartTooltip() {
 	heartTooltip.classList.add("show");
