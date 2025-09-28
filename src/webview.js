@@ -158,6 +158,8 @@ window.addEventListener("message", (event) => {
 			updateCharacterDisplay(message.character);
 			currentFrameMap = message.frameMap;
 			updateAvatarState("default", currentFrameMap);
+
+			chatResponse.textContent = "No messages yet";
 			break;
 
 		case "stateChanged":
