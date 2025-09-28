@@ -35,8 +35,8 @@ function streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
 	};
 }
 
-export function updatevoice(voiceId: string) {
-	voiceId = voiceId;
+export function updatevoice(newvoiceid: string) {
+	voiceId = newvoiceid;
 }
 
 /**
