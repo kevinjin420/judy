@@ -165,15 +165,18 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
                 // For Judy, wait for laugh to finish before starting talking animation
                 if (this._avatarManager.currentCharacter?.id === 'judy') {
+                    // Start speech synthesis immediately
+                    const speechPromise = speak(petResponse);
+
                     // Wait for laugh animation to complete
                     while (this._isAnimating) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
 
-                    // Now start talking animation and speech
+                    // Now that laugh is done, start talking animation and wait for speech to finish
                     await Promise.all([
                         this._animateTalking(petDuration),
-                        speak(petResponse)
+                        speechPromise
                     ]);
                 } else {
                     // For other characters, start talking animation and speech simultaneously
