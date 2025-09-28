@@ -373,6 +373,12 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             });
         } catch (error) {
             console.error('Error loading specific frame image:', error);
+            // Use minimal fallback on error
+            const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
+            this._view.webview.postMessage({
+                type: 'frameImage',
+                imageUrl: fallbackImage
+            });
         }
     }
 
@@ -593,18 +599,6 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         return this._animateFrames(500, talkingStates, true, durationMs);
     }
 
-    // Public methods for external use
-    public setAvatarState(state: AvatarState) {
-        this._updateAvatarState(state);
-    }
-
-    public getCurrentCharacter() {
-        return this._avatarManager.currentCharacter;
-    }
-
-    public getAvatarManager() {
-        return this._avatarManager;
-    }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
         const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'webview.html');
@@ -641,20 +635,15 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
         // Subscribe to motivation messages
         motivationSystem.onMotivationCallback((message: string) => {
-            this._sendMotivationToWebview(message);
+            if (this._view) {
+                this._view.webview.postMessage({
+                    type: 'chatResponse',
+                    text: message
+                });
+            }
         });
     }
 
-    private _sendMotivationToWebview(message: string) {
-        if (!this._view) {
-            return;
-        }
-
-        this._view.webview.postMessage({
-            type: 'chatResponse',
-            text: message
-        });
-    }
 
     public dispose() {
     }
