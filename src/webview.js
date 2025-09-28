@@ -85,9 +85,8 @@ stateSelector.addEventListener("change", (e) => {
 petButton.addEventListener("click", () => {
 	console.log("Avatar petted!");
 	showHeartTooltip();
-	switchToHappyState();
 
-	// Send pet message to LLM
+	// Send pet message to LLM (backend handles the laugh animation)
 	vscode.postMessage({
 		type: "petMessage",
 		characterId: state.selectedCharacter,
@@ -111,18 +110,6 @@ function showHeartTooltip() {
 	}, PET_DURATION);
 }
 
-function switchToHappyState() {
-	// Store current state
-	const currentState = state.currentState;
-
-	// Switch to happy state
-	vscode.postMessage({ type: "setState", state: "happy" });
-
-	// Revert to previous state after configured duration
-	setTimeout(() => {
-		vscode.postMessage({ type: "setState", state: currentState });
-	}, PET_DURATION);
-}
 
 // Handle sidebar location changes
 function handleSidebarLocation(location) {
