@@ -110,14 +110,14 @@ A VS Code extension that provides an interactive AI companion with avatar framew
 ### Interacting with Judy
 - **Chat**: Type messages in the chat input at the bottom of the sidebar
 - **Pet Avatar**: Click the 👋 pet button to make your character happy
-- **Change States**: Use the state dropdown to switch between expressions
+- **View State**: The state display shows the current character expression
 - **Switch Characters**: Select different companions from the character dropdown
 
 ### Character States
 - **Default**: Character's base expression
 - **Happy**: Triggered when petting (5-second duration)
 - **Talking**: Active during AI responses
-- **Thinking**: Can be manually triggered
+- **Thinking**: Active when processing requests
 
 ## Development
 
