@@ -84,11 +84,20 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
                 const estimatedDuration = Math.max(2000, (responseText.length / 5 / 150) * 60 * 1000);
 
-                // Start talking animation and speech simultaneously
-                const [, ] = await Promise.all([
-                    this._animateTalking(estimatedDuration),
-                    speak(responseText)
-                ]);
+                // For Judy, do thinking-to-talking transition, then regular talking
+                if (this._avatarManager.currentCharacter?.id === 'judy') {
+                    await this._animateJudyThinkingToTalking();
+                    await Promise.all([
+                        this._animateTalking(estimatedDuration),
+                        speak(responseText)
+                    ]);
+                } else {
+                    // Start talking animation and speech simultaneously for other characters
+                    await Promise.all([
+                        this._animateTalking(estimatedDuration),
+                        speak(responseText)
+                    ]);
+                }
                 break;
 
             case 'motivationMessage':
@@ -114,11 +123,20 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
                 const motivationDuration = Math.max(2000, (motivationResponse.length / 5 / 150) * 60 * 1000);
 
-                // Start talking animation and speech simultaneously
-                await Promise.all([
-                    this._animateTalking(motivationDuration),
-                    speak(motivationResponse)
-                ]);
+                // For Judy, do thinking-to-talking transition, then regular talking
+                if (this._avatarManager.currentCharacter?.id === 'judy') {
+                    await this._animateJudyThinkingToTalking();
+                    await Promise.all([
+                        this._animateTalking(motivationDuration),
+                        speak(motivationResponse)
+                    ]);
+                } else {
+                    // Start talking animation and speech simultaneously for other characters
+                    await Promise.all([
+                        this._animateTalking(motivationDuration),
+                        speak(motivationResponse)
+                    ]);
+                }
                 break;
 
             case 'petMessage':
@@ -263,6 +281,20 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
         this._avatarManager.setState(state);
 
+        // Handle special Judy animations
+        if (this._avatarManager.currentCharacter?.id === 'judy') {
+            if (state === 'happy' as AvatarState) {
+                // For Judy, trigger laugh animation instead of static happy state
+                this._animateJudyLaugh(3000); // 3 second laugh animation
+                return;
+            } else if (state === 'thinking' as AvatarState) {
+                // For Judy, show thinking frame 1 and stay there
+                this._animateJudyThinking();
+                return;
+            }
+        }
+
+        // Default behavior for other characters or other states
         const frameMap = this._avatarManager.currentCharacter
             ? this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id)
             : null;
@@ -355,6 +387,100 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                     }
                 }
             }, delayMs);
+        });
+    }
+
+    private _animateJudyLaugh(durationMs: number): Promise<void> {
+        return new Promise((resolve) => {
+            if (!this._view) {
+                resolve();
+                return;
+            }
+
+            const frameDelay = 400; // 400ms per frame
+            const holdDuration = 2000; // Hold at frame 3 for exactly 2000ms
+            const startSequence = ['Judy_Laugh_1.png', 'Judy_Laugh_2.png', 'Judy_Laugh_3.png'];
+            const endSequence = ['Judy_Laugh_3.png', 'Judy_Laugh_2.png', 'Judy_Laugh_1.png'];
+
+            let currentPhase = 'start'; // 'start', 'hold', 'end'
+            let frameIndex = 0;
+            let startTime = Date.now();
+            let holdStartTime = 0;
+
+            const interval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+
+                // Play current frame based on phase
+                let currentFrame: string;
+
+                if (currentPhase === 'start') {
+                    currentFrame = startSequence[frameIndex];
+                    frameIndex++;
+
+                    if (frameIndex >= startSequence.length) {
+                        currentPhase = 'hold';
+                        holdStartTime = Date.now();
+                    }
+                } else if (currentPhase === 'hold') {
+                    // Hold at frame 3 for exactly 2000ms
+                    currentFrame = 'Judy_Laugh_3.png';
+
+                    // Check if hold duration is complete
+                    if (Date.now() - holdStartTime >= holdDuration) {
+                        currentPhase = 'end';
+                        frameIndex = 0;
+                    }
+                } else { // end phase
+                    if (frameIndex < endSequence.length) {
+                        currentFrame = endSequence[frameIndex];
+                        frameIndex++;
+                    } else {
+                        // Animation complete
+                        clearInterval(interval);
+                        this._updateAvatarState('default' as AvatarState);
+                        resolve();
+                        return;
+                    }
+                }
+
+                this._sendSpecificFrameImage(currentFrame);
+            }, frameDelay);
+        });
+    }
+
+    private _animateJudyThinking(): Promise<void> {
+        return new Promise((resolve) => {
+            if (!this._view) {
+                resolve();
+                return;
+            }
+
+            // Just show thinking 1 and stay there
+            this._sendSpecificFrameImage('Judy_Thinking_1.png');
+            resolve();
+        });
+    }
+
+    private _animateJudyThinkingToTalking(): Promise<void> {
+        return new Promise((resolve) => {
+            if (!this._view) {
+                resolve();
+                return;
+            }
+
+            const frameDelay = 400;
+            const transitionSequence = ['Judy_Thinking_1.png', 'Judy_Thinking_2.png', 'Judy_Thinking_3.png'];
+            let frameIndex = 0;
+
+            const interval = setInterval(() => {
+                if (frameIndex < transitionSequence.length) {
+                    this._sendSpecificFrameImage(transitionSequence[frameIndex]);
+                    frameIndex++;
+                } else {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, frameDelay);
         });
     }
 
