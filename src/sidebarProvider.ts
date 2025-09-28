@@ -13,6 +13,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private _avatarManager: AvatarManager;
     private _motivationSystem?: MotivationSystem;
+    private _isAnimating: boolean = false;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._avatarManager = new AvatarManager(this._extensionUri);
@@ -60,6 +61,10 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 break;
 
             case 'getFrameImage':
+                // Don't process frame requests during Judy's special animations
+                if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
+                    break;
+                }
                 this._sendFrameImage(message.characterId, message.frameName);
                 break;
 
@@ -158,11 +163,25 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
                 const petDuration = Math.max(2000, (petResponse.length / 5 / 150) * 60 * 1000);
 
-                // Start talking animation and speech simultaneously
-                await Promise.all([
-                    this._animateTalking(petDuration),
-                    speak(petResponse)
-                ]);
+                // For Judy, wait for laugh to finish before starting talking animation
+                if (this._avatarManager.currentCharacter?.id === 'judy') {
+                    // Wait for laugh animation to complete
+                    while (this._isAnimating) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    // Now start talking animation and speech
+                    await Promise.all([
+                        this._animateTalking(petDuration),
+                        speak(petResponse)
+                    ]);
+                } else {
+                    // For other characters, start talking animation and speech simultaneously
+                    await Promise.all([
+                        this._animateTalking(petDuration),
+                        speak(petResponse)
+                    ]);
+                }
                 break;
 
             default:
@@ -279,13 +298,21 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             return;
         }
 
+        // Don't allow state changes during special animations
+        if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
+            return;
+        }
+
         this._avatarManager.setState(state);
 
         // Handle special Judy animations
         if (this._avatarManager.currentCharacter?.id === 'judy') {
             if (state === 'happy' as AvatarState) {
                 // For Judy, trigger laugh animation instead of static happy state
-                this._animateJudyLaugh(3000); // 3 second laugh animation
+                this._isAnimating = true;
+                this._animateJudyLaugh(3000).then(() => {
+                    this._isAnimating = false;
+                });
                 return;
             } else if (state === 'thinking' as AvatarState) {
                 // For Judy, show thinking frame 1 and stay there
@@ -299,11 +326,14 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             ? this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id)
             : null;
 
-        this._view.webview.postMessage({
-            type: 'stateChanged',
-            state: state,
-            frameMap: frameMap
-        });
+        // Don't send stateChanged during Judy animations to prevent webview interference
+        if (!(this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy')) {
+            this._view.webview.postMessage({
+                type: 'stateChanged',
+                state: state,
+                frameMap: frameMap
+            });
+        }
     }
 
     private _sendSpecificFrameImage(frameName: string) {
@@ -349,6 +379,12 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     private _animateFrames(delayMs: number, states: AvatarState[], shouldLoop: boolean, durationMs?: number): Promise<void> {
         return new Promise((resolve) => {
             if (!this._view || states.length === 0) {
+                resolve();
+                return;
+            }
+
+            // Don't start new animations during special Judy animations
+            if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
                 resolve();
                 return;
             }
@@ -542,6 +578,11 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _animateTalking(durationMs: number): Promise<void> {
+        // Don't start talking animation during special Judy animations
+        if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
+            return Promise.resolve();
+        }
+
         // Check if current character is Judy
         if (this._avatarManager.currentCharacter?.id === 'judy') {
             return this._animateJudyTalking(durationMs);
