@@ -4,19 +4,19 @@ A VS Code extension that provides an interactive AI companion with avatar framew
 
 ## Features
 
-### 🎭 Interactive Avatar System
+### Interactive Avatar System
 - Multiple character companions (Judy, Leah, Penny)
 - Character state management (default, happy, talking, thinking)
 - Pet your avatar with visual heart feedback
 - Avatar flips based on sidebar position for natural interaction
 
-### 💬 AI Chat Integration
+### AI Chat Integration
 - Real-time conversations with Google Gemini AI
 - Text-to-speech responses using ElevenLabs
 - Character-specific personalities and prompts
 - Contextual coding assistance and motivation
 
-### 🎨 VS Code Integration
+### VS Code Integration
 - Seamless sidebar integration in Explorer tab
 - Native VS Code theming support
 - Responsive design adapting to sidebar width
@@ -82,8 +82,7 @@ A VS Code extension that provides an interactive AI companion with avatar framew
    ```
 
 5. **Install in VS Code:**
-   - Press `F5` to launch a new VS Code window with the extension loaded
-   - Or package and install: `vsce package` then install the `.vsix` file
+   - Press `F5` or use `ctrl-shift-P`, then select `Debug: Start Debugging` to launch a new VS Code window with the extension loaded
 
 ### Getting API Keys
 
@@ -102,20 +101,17 @@ A VS Code extension that provides an interactive AI companion with avatar framew
 ## Usage
 
 ### First Time Setup
-1. Install the extension and open VS Code
-2. If you haven't set up API keys, the extension will automatically prompt you
-3. Alternatively, use Command Palette: `Judy: Setup Environment`
-4. Find "Judy AI Companion" in the Explorer sidebar
+Find "Judy AI Companion" in the Explorer sidebar
 
 ### Interacting with Judy
 - **Chat**: Type messages in the chat input at the bottom of the sidebar
-- **Pet Avatar**: Click the 👋 pet button to make your character happy
+- **Pet Avatar**: Click the pet button to make your character happy
 - **View State**: The state display shows the current character expression
 - **Switch Characters**: Select different companions from the character dropdown
 
 ### Character States
 - **Default**: Character's base expression
-- **Happy**: Triggered when petting (5-second duration)
+- **Happy**: Triggered when petting
 - **Talking**: Active during AI responses
 - **Thinking**: Active when processing requests
 
@@ -167,82 +163,5 @@ A VS Code extension that provides an interactive AI companion with avatar framew
 npm run compile
 ```
 
-### Testing
-```bash
-npm run test
-```
 
-## Configuration
-
-The extension contributes these VS Code settings:
-
-- `judy.currentCharacter`: Select active character (judy, leah, penny)
-
-## File Structure
-
-```
-src/
-├── extension.ts              # Extension entry point
-├── sidebarProvider.ts        # Main webview provider
-├── setup.ts                  # Environment setup workflow
-├── webview.html             # Webview HTML template
-├── webview.css              # Webview styles
-├── webview.js               # Webview JavaScript logic
-├── llmcall.mjs              # Gemini AI integration
-├── 11labstest.mjs           # ElevenLabs TTS integration
-└── avatars/
-    ├── types/
-    │   └── avatar.ts        # TypeScript interfaces
-    ├── components/
-    │   └── avatarManager.ts # Avatar management logic
-    ├── characters/          # Character definitions
-    │   ├── judy/
-    │   ├── leah/
-    │   └── penny/
-    │       ├── character.json
-    │       └── frames/
-    └── default.png          # Fallback image
-```
-
-## Troubleshooting
-
-### Extension Won't Activate
-- Ensure API keys are properly set in `.env` file
-- Check that FFmpeg is installed and accessible
-- Run `Judy: Setup Environment` command to reconfigure
-
-### Audio Not Working
-- Verify FFmpeg installation: `ffmpeg -version`
-- Check ElevenLabs API key and account credits
-- Ensure system audio is enabled
-
-### Missing Character Images
-- Verify image files exist in character frames folder
-- Check file extensions match character.json configuration
-- Default fallback image will be used for missing files
-
-## Known Issues
-
-- Position calculation uses estimated character dimensions
-- Some external dependencies may show TypeScript warnings (safely ignored)
-- Audio playback requires system audio permissions
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues and feature requests, please use the [GitHub Issues](https://github.com/your-username/judy/issues) page.
-
----
-
-**Enjoy coding with Judy! 🎭✨**
+# Enjoy coding with Judy!
