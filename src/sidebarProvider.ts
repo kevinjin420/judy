@@ -124,13 +124,13 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             case 'petMessage':
                 console.log('Pet message received for character:', message.characterId);
 
-                // Set to thinking state while waiting for LLM response
-                this._updateAvatarState('thinking' as AvatarState);
+                // Set to happy state immediately when petted
+                this._updateAvatarState('happy' as AvatarState);
 
                 // Get character-specific pet response
                 const character = this._avatarManager.currentCharacter;
                 const characterName = character?.displayName || 'the character';
-                const petResponse = await askGemini(`The user just pet ${characterName}. Respond warmly and briefly to being petted, staying in character.`);
+                const petResponse = await askGemini(`The user just pet ${characterName} on the head. Respond warmly and briefly to being petted, staying in character.`);
 
                 this._view?.webview.postMessage({
                     type: 'chatResponse',
@@ -274,6 +274,46 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    private _sendSpecificFrameImage(frameName: string) {
+        if (!this._view || !this._avatarManager.currentCharacter) {
+            return;
+        }
+
+        const characterId = this._avatarManager.currentCharacter.id;
+        const framePath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'frames', frameName);
+
+        try {
+            let imageData: Buffer;
+            let mimeType = 'image/png';
+
+            if (fs.existsSync(framePath)) {
+                imageData = fs.readFileSync(framePath);
+
+                const ext = path.extname(frameName).toLowerCase();
+                if (ext === '.gif') {
+                    mimeType = 'image/gif';
+                } else if (ext === '.jpg' || ext === '.jpeg') {
+                    mimeType = 'image/jpeg';
+                }
+            } else {
+                // Fallback to default
+                const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
+                imageData = fs.readFileSync(defaultPath);
+                mimeType = 'image/png';
+            }
+
+            const base64Data = imageData.toString('base64');
+            const imageUrl = `data:${mimeType};base64,${base64Data}`;
+
+            this._view.webview.postMessage({
+                type: 'frameImage',
+                imageUrl: imageUrl
+            });
+        } catch (error) {
+            console.error('Error loading specific frame image:', error);
+        }
+    }
+
     private _animateFrames(delayMs: number, states: AvatarState[], shouldLoop: boolean, durationMs?: number): Promise<void> {
         return new Promise((resolve) => {
             if (!this._view || states.length === 0) {
@@ -318,7 +358,70 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    private _animateJudyTalking(durationMs: number): Promise<void> {
+        return new Promise((resolve) => {
+            if (!this._view) {
+                resolve();
+                return;
+            }
+
+            const frameDelay = 400; // 400ms per frame
+            const sequence = ['Judy_Talking_1.png', 'Judy_Talking_2.png', 'Judy_Talking_3.png'];
+            const loopSequence = ['Judy_Talking_2.png', 'Judy_Talking_3.png'];
+            const endSequence = ['Judy_Talking_2.png', 'Judy_Talking_1.png'];
+
+            let currentPhase = 'start'; // 'start', 'loop', 'end'
+            let frameIndex = 0;
+            let startTime = Date.now();
+
+            const interval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+
+                // Check if we should start ending sequence
+                if (currentPhase === 'loop' && elapsed >= durationMs - (endSequence.length * frameDelay)) {
+                    currentPhase = 'end';
+                    frameIndex = 0;
+                }
+
+                // Play current frame based on phase
+                let currentFrame: string;
+
+                if (currentPhase === 'start') {
+                    currentFrame = sequence[frameIndex];
+                    frameIndex++;
+
+                    if (frameIndex >= sequence.length) {
+                        currentPhase = 'loop';
+                        frameIndex = 0;
+                    }
+                } else if (currentPhase === 'loop') {
+                    currentFrame = loopSequence[frameIndex % loopSequence.length];
+                    frameIndex++;
+                } else { // end phase
+                    if (frameIndex < endSequence.length) {
+                        currentFrame = endSequence[frameIndex];
+                        frameIndex++;
+                    } else {
+                        // Animation complete
+                        clearInterval(interval);
+                        this._updateAvatarState('default' as AvatarState);
+                        resolve();
+                        return;
+                    }
+                }
+
+                this._sendSpecificFrameImage(currentFrame);
+            }, frameDelay);
+        });
+    }
+
     private _animateTalking(durationMs: number): Promise<void> {
+        // Check if current character is Judy
+        if (this._avatarManager.currentCharacter?.id === 'judy') {
+            return this._animateJudyTalking(durationMs);
+        }
+
+        // Default animation for other characters
         const talkingStates: AvatarState[] = ['default' as AvatarState, 'talking' as AvatarState];
         return this._animateFrames(500, talkingStates, true, durationMs);
     }
