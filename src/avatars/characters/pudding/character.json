@@ -14,7 +14,6 @@
 		"default": "Pudding.png",
 		"happy": "Pudding_Happy.png",
 		"talking": "Pudding_Talking.png",
-		"thinking": "Pudding_Thinking.png",
-		"idle": "Leah_Idle.gif"
+		"thinking": "Pudding_Thinking.png"
 	}
 }
