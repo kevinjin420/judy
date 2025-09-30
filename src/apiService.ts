@@ -1,18 +1,33 @@
 import { GoogleGenAI } from "@google/genai";
 import { ElevenLabsClient, play } from "@elevenlabs/elevenlabs-js";
 
-// API keys are loaded from VS Code settings via extension.ts
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+// API clients - initialized lazily when first used
+let ai: GoogleGenAI | null = null;
+let elevenlabs: ElevenLabsClient | null = null;
 
-console.log("[JudyAI Debug] Gemini API Key configured:", !!GEMINI_API_KEY);
-console.log(
-	"[JudyAI Debug] ElevenLabs API Key configured:",
-	!!ELEVENLABS_API_KEY
-);
+/**
+ * Get or initialize the Gemini AI client
+ */
+function getAIClient(): GoogleGenAI {
+	if (!ai) {
+		const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+		console.log("[JudyAI Debug] Initializing Gemini client, API Key configured:", !!GEMINI_API_KEY);
+		ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+	}
+	return ai;
+}
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-const elevenlabs = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
+/**
+ * Get or initialize the ElevenLabs client
+ */
+function getElevenLabsClient(): ElevenLabsClient {
+	if (!elevenlabs) {
+		const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+		console.log("[JudyAI Debug] Initializing ElevenLabs client, API Key configured:", !!ELEVENLABS_API_KEY);
+		elevenlabs = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
+	}
+	return elevenlabs;
+}
 
 // Store conversation history
 const conversationHistory: { role: "user" | "model"; text: string }[] = [];
@@ -76,7 +91,7 @@ export async function askGemini(userPrompt: string): Promise<string> {
         ")"
       );
 
-      const response = await ai.models.generateContent({
+      const response = await getAIClient().models.generateContent({
         model: "gemini-2.0-flash-001",
         contents,
       });
@@ -195,7 +210,7 @@ export async function speakWithDuration(
 		console.log("[JudyAI Debug] Using voice ID:", voiceId);
 		console.log("[JudyAI Debug] Speech speed rate:", speedRate);
 
-		const audio = await elevenlabs.textToSpeech.convert(voiceId, {
+		const audio = await getElevenLabsClient().textToSpeech.convert(voiceId, {
 			text: input,
 			modelId: "eleven_flash_v2_5",
 			outputFormat: "mp3_44100_128",

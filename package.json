@@ -2,7 +2,7 @@
 	"name": "judy",
 	"displayName": "judyai",
 	"description": "AI Companion to help you lock in",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"publisher": "kevinj",
 	"icon": "icon.png",
 	"type": "module",
