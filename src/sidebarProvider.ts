@@ -59,6 +59,14 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 this._updateVolumeSetting(message.volume);
                 break;
 
+            case 'getCharacterJson':
+                this._sendCharacterJson(message.characterId);
+                break;
+
+            case 'saveCharacterJson':
+                await this._saveCharacterJson(message.characterId, message.jsonData);
+                break;
+
             case 'selectCharacter':
                 await this._avatarManager.switchCharacter(message.characterId);
                 this._sendCharacterToWebview();
@@ -396,6 +404,44 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         const volume = config.get('volume', 100);
         setVolume(volume);
         console.log('[JudyAI Debug] Volume initialized to:', volume);
+    }
+
+    private _sendCharacterJson(characterId: string) {
+        if (!this._view) {
+            return;
+        }
+
+        try {
+            const characterPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'character.json');
+            const jsonData = JSON.parse(fs.readFileSync(characterPath, 'utf8'));
+
+            this._view.webview.postMessage({
+                type: 'characterJsonData',
+                data: jsonData
+            });
+
+            console.log('[JudyAI Debug] Sent character JSON for:', characterId);
+        } catch (error) {
+            console.error('[JudyAI Debug] Error reading character JSON:', error);
+            vscode.window.showErrorMessage('Failed to load character settings');
+        }
+    }
+
+    private async _saveCharacterJson(characterId: string, jsonData: any) {
+        try {
+            const characterPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'character.json');
+            fs.writeFileSync(characterPath, JSON.stringify(jsonData, null, '\t'));
+
+            console.log('[JudyAI Debug] Saved character JSON for:', characterId);
+            vscode.window.showInformationMessage('Character settings saved successfully!');
+
+            // Reload the character to apply changes
+            await this._avatarManager.switchCharacter(characterId);
+            this._sendCharacterToWebview();
+        } catch (error) {
+            console.error('[JudyAI Debug] Error saving character JSON:', error);
+            vscode.window.showErrorMessage('Failed to save character settings');
+        }
     }
 
     public dispose() {

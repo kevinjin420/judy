@@ -13,6 +13,11 @@ const petButton = document.getElementById("petButton");
 const heartTooltip = document.getElementById("heartTooltip");
 const volumeSlider = document.getElementById("volumeSlider");
 const volumeValue = document.getElementById("volumeValue");
+const settingsButton = document.getElementById("settingsButton");
+const settingsPanel = document.getElementById("settingsPanel");
+const cancelSettings = document.getElementById("cancelSettings");
+const characterJson = document.getElementById("characterJson");
+const saveSettings = document.getElementById("saveSettings");
 
 // Current frame map
 let currentFrameMap = null;
@@ -97,13 +102,41 @@ volumeSlider.addEventListener("input", (e) => {
 		clearTimeout(volumeDebounceTimer);
 	}
 
-	// Set new timer to send update after 300ms of no changes
+	// debounce
 	volumeDebounceTimer = setTimeout(() => {
 		vscode.postMessage({
 			type: "setVolume",
 			volume: volume,
 		});
-	}, 300);
+	}, 500);
+});
+
+// Settings button functionality
+settingsButton.addEventListener("click", () => {
+	console.log("[JudyAI Debug] Opening settings for character:", state.selectedCharacter);
+	vscode.postMessage({
+		type: "getCharacterJson",
+		characterId: state.selectedCharacter,
+	});
+	settingsPanel.classList.add("visible");
+});
+
+cancelSettings.addEventListener("click", () => {
+	settingsPanel.classList.remove("visible");
+});
+
+saveSettings.addEventListener("click", () => {
+	try {
+		const jsonData = JSON.parse(characterJson.value);
+		vscode.postMessage({
+			type: "saveCharacterJson",
+			characterId: state.selectedCharacter,
+			jsonData: jsonData,
+		});
+		settingsPanel.classList.remove("visible");
+	} catch (error) {
+		alert("Invalid JSON format: " + error.message);
+	}
 });
 
 
@@ -192,6 +225,10 @@ window.addEventListener("message", (event) => {
 		case "volumeUpdate":
 			volumeSlider.value = message.volume;
 			volumeValue.textContent = message.volume + "%";
+			break;
+
+		case "characterJsonData":
+			characterJson.value = JSON.stringify(message.data, null, 2);
 			break;
 
 		case "error":

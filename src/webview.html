@@ -9,10 +9,15 @@
 <body>
     <div class="container">
         <div class="header">
-            <select class="character-selector" id="characterSelector">
-                <option value="">Loading characters...</option>
-            </select>
-            <button class="pet-button" id="petButton" title="Pet the avatar">👋</button>
+            <div class="header-row">
+                <select class="character-selector" id="characterSelector">
+                    <option value="">Loading characters...</option>
+                </select>
+                <div class="action-buttons">
+                    <button class="pet-button" id="petButton" title="Pet the avatar">👋</button>
+                    <button class="settings-button" id="settingsButton" title="Character Settings">⚙️</button>
+                </div>
+            </div>
             <div class="volume-control">
                 <span class="volume-icon">🔊</span>
                 <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100" title="Volume">
@@ -32,8 +37,20 @@
 				<input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." />
 			</div>
 		</div>
+    </div>
 
-
+    <!-- Settings Panel (hidden by default) -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h3>Character Settings</h3>
+        </div>
+        <div class="settings-content">
+            <textarea class="character-json" id="characterJson" placeholder="Loading character data..."></textarea>
+        </div>
+        <div class="settings-footer">
+            <button class="cancel-button" id="cancelSettings">Cancel</button>
+            <button class="save-button" id="saveSettings">Save Changes</button>
+        </div>
     </div>
 
     <script src="{{JS_URI}}"></script>

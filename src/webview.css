@@ -22,13 +22,18 @@ html, body {
 
 .header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     padding: 8px 0;
     border-bottom: 1px solid var(--vscode-panel-border);
     flex-shrink: 0;
     gap: 8px;
-    flex-wrap: wrap;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
 }
 
 .character-selector {
@@ -100,12 +105,40 @@ html, body {
     background: var(--vscode-list-activeSelectionBackground);
 }
 
+.settings-button {
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    color: var(--vscode-dropdown-foreground);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-button:hover {
+    background: var(--vscode-dropdown-listBackground);
+}
+
+.settings-button:active {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .volume-control {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 1;
-    min-width: 120px;
+    width: 100%;
 }
 
 .volume-icon {
@@ -230,4 +263,93 @@ html, body {
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
     cursor: pointer;
+}
+
+/* Settings Panel */
+.settings-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--vscode-editor-background);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+}
+
+.settings-panel.visible {
+    display: flex;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.settings-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+
+.settings-content {
+    flex: 1;
+    padding: 12px;
+    overflow: auto;
+}
+
+.character-json {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    padding: 8px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 12px;
+    resize: vertical;
+}
+
+.settings-footer {
+    padding: 12px;
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cancel-button {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.cancel-button:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.save-button {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.save-button:hover {
+    background: var(--vscode-button-hoverBackground);
 }
