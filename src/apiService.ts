@@ -1,16 +1,7 @@
-import * as dotenv from "dotenv";
-import * as path from "path";
-import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { ElevenLabsClient, play } from "@elevenlabs/elevenlabs-js";
 
-// Recreate __dirname in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables
-dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
-
+// API keys are loaded from VS Code settings via extension.ts
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
