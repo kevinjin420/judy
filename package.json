@@ -50,6 +50,13 @@
 					"default": "",
 					"description": "ElevenLabs API Key for text-to-speech. Get your key from: https://elevenlabs.io/app/settings/api-keys",
 					"markdownDescription": "ElevenLabs API Key for text-to-speech. [Get your key here](https://elevenlabs.io/app/settings/api-keys)"
+				},
+				"judy.volume": {
+					"type": "number",
+					"default": 100,
+					"minimum": 0,
+					"maximum": 100,
+					"description": "Audio volume for text-to-speech (0-100)"
 				}
 			}
 		}

@@ -29,6 +29,7 @@ const conversationHistory: { role: "user" | "model"; text: string }[] = [];
 // Voice ID and system prompt - configured per character
 let voiceId = "zmcVlqmyk3Jpn5AVYcAL"; // Default voice id
 let systemPrompt = "You are a helpful AI assistant."; // Default system prompt
+let volumeLevel = 1.0; // Default volume (0.0 to 1.0)
 
 /**
  * Convert ReadableStream to AsyncIterable for play()
@@ -253,8 +254,8 @@ export async function speakWithDuration(
 		// Get actual duration from the audio
 		const duration = getMP3Duration(audioBuffer);
 
-		// Play the audio
-		console.log("[JudyAI Debug] Starting playback...");
+		// Play the audio with volume control
+		console.log("[JudyAI Debug] Starting playback with volume:", volumeLevel);
 		await play(
 			streamToAsyncIterable(
 				new ReadableStream({
@@ -263,7 +264,8 @@ export async function speakWithDuration(
 						controller.close();
 					},
 				})
-			)
+			),
+			{ volume: volumeLevel }
 		);
 		console.log("[JudyAI Debug] Playback completed");
 
@@ -284,4 +286,13 @@ export function configureCharacter(
 	systemPrompt = newSystemPrompt;
 	voiceId = newVoiceId;
 	conversationHistory.length = 0; // Clear history when switching characters
+}
+
+/**
+ * Set volume level for audio playback (0-100)
+ */
+export function setVolume(volume: number): void {
+	// Convert from 0-100 to 0.0-1.0 range
+	volumeLevel = Math.max(0, Math.min(100, volume)) / 100;
+	console.log("[JudyAI Debug] Volume level set to:", volumeLevel);
 }

@@ -11,6 +11,8 @@ const characterSelector = document.getElementById("characterSelector");
 const avatarImage = document.getElementById("avatarImage");
 const petButton = document.getElementById("petButton");
 const heartTooltip = document.getElementById("heartTooltip");
+const volumeSlider = document.getElementById("volumeSlider");
+const volumeValue = document.getElementById("volumeValue");
 
 // Current frame map
 let currentFrameMap = null;
@@ -21,6 +23,7 @@ const PET_DURATION = 3000; // Duration in milliseconds for pet effects
 // Initialize
 function initialize() {
 	vscode.postMessage({ type: "getCharacters" });
+	vscode.postMessage({ type: "getVolume" });
 
 	if (state.selectedCharacter) {
 		vscode.postMessage({
@@ -81,6 +84,26 @@ petButton.addEventListener("click", () => {
 		type: "petMessage",
 		characterId: state.selectedCharacter,
 	});
+});
+
+// Volume slider functionality with debounce
+let volumeDebounceTimer = null;
+volumeSlider.addEventListener("input", (e) => {
+	const volume = parseInt(e.target.value);
+	volumeValue.textContent = volume + "%";
+
+	// Clear existing timer
+	if (volumeDebounceTimer) {
+		clearTimeout(volumeDebounceTimer);
+	}
+
+	// Set new timer to send update after 300ms of no changes
+	volumeDebounceTimer = setTimeout(() => {
+		vscode.postMessage({
+			type: "setVolume",
+			volume: volume,
+		});
+	}, 300);
 });
 
 
@@ -166,6 +189,10 @@ window.addEventListener("message", (event) => {
 			handleSidebarLocation(message.location);
 			break;
 
+		case "volumeUpdate":
+			volumeSlider.value = message.volume;
+			volumeValue.textContent = message.volume + "%";
+			break;
 
 		case "error":
 			updateAvatarState("error");

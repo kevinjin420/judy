@@ -30,7 +30,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Register command to open VS Code settings
 	const openSettingsCommand = vscode.commands.registerCommand('judy.openSettings', () => {
-		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:undefined_publisher.judy');
+		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:kevinj.judy');
 	});
 
 	context.subscriptions.push(openSettingsCommand);

@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AvatarManager } from './avatars/components/avatarManager.js';
 import { AvatarState, Character } from './avatars/types/avatar.js';
-import { askGemini, speakWithDuration } from './apiService.js';
+import { askGemini, speakWithDuration, setVolume } from './apiService.js';
 
 export class JudySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'judySidebar';
@@ -35,7 +35,11 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         // Send initial data to webview
         this._sendCharactersToWebview();
         this._sendSidebarLocation();
+        this._sendVolumeToWebview();
         this._checkAndNotifyApiKeys();
+
+        // Initialize volume from settings
+        this._initializeVolume();
     }
 
     private async _handleWebviewMessage(message: any) {
@@ -45,6 +49,14 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             case 'getCharacters':
                 this._sendCharactersToWebview();
                 this._sendSidebarLocation();
+                break;
+
+            case 'getVolume':
+                this._sendVolumeToWebview();
+                break;
+
+            case 'setVolume':
+                this._updateVolumeSetting(message.volume);
                 break;
 
             case 'selectCharacter':
@@ -356,6 +368,34 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 text: 'API keys are not configured. Please configure your Gemini and ElevenLabs API keys in VS Code settings.\n\nUse the command: "Judy: Open Settings" from the Command Palette (Ctrl+Shift+P or Cmd+Shift+P)'
             });
         }
+    }
+
+    private _sendVolumeToWebview() {
+        if (!this._view) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('judy');
+        const volume = config.get('volume', 100);
+
+        this._view.webview.postMessage({
+            type: 'volumeUpdate',
+            volume: volume
+        });
+    }
+
+    private async _updateVolumeSetting(volume: number) {
+        const config = vscode.workspace.getConfiguration('judy');
+        await config.update('volume', volume, vscode.ConfigurationTarget.Global);
+        setVolume(volume);
+        console.log('[JudyAI Debug] Volume updated to:', volume);
+    }
+
+    private _initializeVolume() {
+        const config = vscode.workspace.getConfiguration('judy');
+        const volume = config.get('volume', 100);
+        setVolume(volume);
+        console.log('[JudyAI Debug] Volume initialized to:', volume);
     }
 
     public dispose() {

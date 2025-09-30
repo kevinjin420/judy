@@ -28,6 +28,7 @@ html, body {
     border-bottom: 1px solid var(--vscode-panel-border);
     flex-shrink: 0;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .character-selector {
@@ -97,6 +98,53 @@ html, body {
 
 .pet-button:active {
     background: var(--vscode-list-activeSelectionBackground);
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.volume-icon {
+    font-size: 14px;
+}
+
+.volume-slider {
+    flex: 1;
+    height: 4px;
+    background: var(--vscode-input-background);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--vscode-button-background);
+    cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--vscode-button-background);
+    cursor: pointer;
+    border: none;
+}
+
+.volume-value {
+    font-size: 10px;
+    color: var(--vscode-descriptionForeground);
+    min-width: 35px;
+    text-align: right;
 }
 
 
