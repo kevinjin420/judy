@@ -1,8 +1,10 @@
 {
 	"name": "judy",
-	"displayName": "judy",
+	"displayName": "judyai",
 	"description": "AI Companion to help you lock in",
-	"version": "0.0.1",
+	"version": "0.0.3",
+	"publisher": "kevinj",
+	"icon": "icon.png",
 	"type": "module",
 	"engines": {
 		"vscode": "^1.104.0"
