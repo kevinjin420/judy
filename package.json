@@ -1,8 +1,10 @@
 {
 	"name": "judy",
-	"displayName": "judy",
+	"displayName": "judyai",
 	"description": "AI Companion to help you lock in",
-	"version": "0.0.1",
+	"version": "0.0.3",
+	"publisher": "kevinj",
+	"icon": "icon.png",
 	"type": "module",
 	"engines": {
 		"vscode": "^1.104.0"
@@ -10,13 +12,17 @@
 	"categories": [
 		"Other"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kevinjin420/judy"
+	},
 	"activationEvents": [],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "judy.setupEnvironment",
-				"title": "Setup Environment",
+				"command": "judy.openSettings",
+				"title": "Open Settings",
 				"category": "Judy"
 			}
 		],
@@ -24,29 +30,26 @@
 			"explorer": [
 				{
 					"id": "judySidebar",
-					"name": "Judy AI Companion",
+					"name": "Judy AI",
 					"type": "webview",
 					"when": "true"
 				}
 			]
 		},
 		"configuration": {
-			"title": "Judy AI Companion",
+			"title": "Judy AI",
 			"properties": {
-				"judy.currentCharacter": {
+				"judy.geminiApiKey": {
 					"type": "string",
-					"default": "judy",
-					"description": "The currently selected AI companion character",
-					"enum": [
-						"judy",
-						"leah",
-						"penny"
-					],
-					"enumDescriptions": [
-						"Judy - Encouraging productivity-focused companion",
-						"Leah - Leah from Stardew Valley",
-						"Penny - A helpful and friendly AI companion"
-					]
+					"default": "",
+					"description": "Google Gemini API Key for AI conversations. Get your key from: https://makersuite.google.com/app/apikey",
+					"markdownDescription": "Google Gemini API Key for AI conversations. [Get your key here](https://makersuite.google.com/app/apikey)"
+				},
+				"judy.elevenlabsApiKey": {
+					"type": "string",
+					"default": "",
+					"description": "ElevenLabs API Key for text-to-speech. Get your key from: https://elevenlabs.io/app/settings/api-keys",
+					"markdownDescription": "ElevenLabs API Key for text-to-speech. [Get your key here](https://elevenlabs.io/app/settings/api-keys)"
 				}
 			}
 		}
@@ -75,7 +78,6 @@
 		"@elevenlabs/elevenlabs-js": "^2.16.0",
 		"@google/genai": "^1.21.0",
 		"@google/generative-ai": "^0.24.1",
-		"dotenv": "^17.2.2",
 		"ffmpeg": "^0.0.4",
 		"openai": "^5.23.1"
 	}

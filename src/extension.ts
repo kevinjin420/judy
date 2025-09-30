@@ -1,16 +1,19 @@
 import * as vscode from 'vscode';
 import { JudySidebarProvider } from './sidebarProvider.js';
-import { setupEnvironment, checkEnvironmentSetup } from './setup.js';
-import * as dotenv from "dotenv";
+import { checkEnvironmentSetup, loadApiKeys } from './setup.js';
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('[JudyAI Debug] Activating Judy AI Companion...');
 
-	// Load environment variables from .env file in extension directory
-	dotenv.config({ path: context.extensionUri.fsPath + '/.env' });
+	// Load API keys from VS Code settings
+	const apiKeys = loadApiKeys();
+
+	// Set as environment variables for backward compatibility with existing code
+	process.env.GEMINI_API_KEY = apiKeys.geminiApiKey;
+	process.env.ELEVENLABS_API_KEY = apiKeys.elevenlabsApiKey;
 
 	// Check environment setup first
-	const envReady = await checkEnvironmentSetup(context.extensionUri);
+	const envReady = await checkEnvironmentSetup();
 
 	if (!envReady) {
 		console.log('[JudyAI Debug] Environment not fully configured, but continuing activation...');
@@ -25,16 +28,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(JudySidebarProvider.viewType, sidebarProvider)
 	);
 
-	// Register setup command
-	const setupCommand = vscode.commands.registerCommand('judy.setupEnvironment', async () => {
-		const success = await setupEnvironment(context.extensionUri);
-		if (success) {
-			// Reload environment variables after setup
-			dotenv.config({ path: context.extensionUri.fsPath + '/.env' });
-		}
+	// Register command to open VS Code settings
+	const openSettingsCommand = vscode.commands.registerCommand('judy.openSettings', () => {
+		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:undefined_publisher.judy');
 	});
 
-	context.subscriptions.push(setupCommand);
+	context.subscriptions.push(openSettingsCommand);
 
 	console.log('[JudyAI Debug] Judy AI Companion activated successfully!');
 }
