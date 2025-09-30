@@ -15,10 +15,6 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "judy.helloWorld",
-				"title": "Hello World"
-			},
-			{
 				"command": "judy.setupEnvironment",
 				"title": "Setup Environment",
 				"category": "Judy"

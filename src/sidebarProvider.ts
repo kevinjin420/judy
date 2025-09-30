@@ -3,17 +3,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AvatarManager } from './avatars/components/avatarManager.js';
 import { AvatarState, Character } from './avatars/types/avatar.js';
-import { MotivationSystem } from './motivationSystem.js';
 import "dotenv/config";
-import { askGemini } from './llmcall.mjs';
-import { speak } from './11labstest.mjs';
+import { askGemini, speakWithDuration } from './apiService.js';
 
 export class JudySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'judySidebar';
     private _view?: vscode.WebviewView;
     private _avatarManager: AvatarManager;
-    private _motivationSystem?: MotivationSystem;
-    private _isAnimating: boolean = false;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._avatarManager = new AvatarManager(this._extensionUri);
@@ -43,7 +39,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private async _handleWebviewMessage(message: any) {
-        console.log('Received message from Webview:', message);
+        console.log('[JudyAI Debug] Received message from Webview:', message);
 
         switch (message.type) {
             case 'getCharacters':
@@ -61,10 +57,6 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 break;
 
             case 'getFrameImage':
-                // Don't process frame requests during Judy's special animations
-                if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
-                    break;
-                }
                 this._sendFrameImage(message.characterId, message.frameName);
                 break;
 
@@ -74,10 +66,10 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
 
             case 'chatMessage':
                 const userMsg = message.text;
-                console.log('Chat message received:', userMsg);
+                console.log('[JudyAI Debug] Chat message received:', userMsg);
 
                 // Set to thinking state while waiting for LLM response
-                this._updateAvatarState('thinking' as AvatarState);
+                this._updateAvatarState(AvatarState.THINKING);
 
                 const responseText = await askGemini(userMsg);
 
@@ -86,69 +78,15 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                     text: responseText
                 });
 
-                // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
-                const estimatedDuration = Math.max(2000, (responseText.length / 5 / 150) * 60 * 1000);
-
-                // For Judy, do thinking-to-talking transition, then regular talking
-                if (this._avatarManager.currentCharacter?.id === 'judy') {
-                    await this._animateJudyThinkingToTalking();
-                    await Promise.all([
-                        this._animateTalking(estimatedDuration),
-                        speak(responseText)
-                    ]);
-                } else {
-                    // Start talking animation and speech simultaneously for other characters
-                    await Promise.all([
-                        this._animateTalking(estimatedDuration),
-                        speak(responseText)
-                    ]);
-                }
-                break;
-
-            case 'motivationMessage':
-                console.log('Motivation message triggered from webview');
-
-                // Set to thinking state while waiting for LLM response
-                this._updateAvatarState('thinking' as AvatarState);
-
-                // Get session stats for LLM prompt
-                const stats = this._motivationSystem?.getStats();
-                const sessionMinutes = stats?.sessionMinutes || 0;
-                const charactersTyped = stats?.charactersTyped || 0;
-
-                const motivationPrompt = `The user has been coding for ${sessionMinutes} minutes and has typed ${charactersTyped} characters in this session. Please provide a brief, encouraging motivational message to keep them going. Be positive and supportive.`;
-
-                const motivationResponse = await askGemini(motivationPrompt);
-
-                this._view?.webview.postMessage({
-                    type: 'chatResponse',
-                    text: motivationResponse
-                });
-
-                // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
-                const motivationDuration = Math.max(2000, (motivationResponse.length / 5 / 150) * 60 * 1000);
-
-                // For Judy, do thinking-to-talking transition, then regular talking
-                if (this._avatarManager.currentCharacter?.id === 'judy') {
-                    await this._animateJudyThinkingToTalking();
-                    await Promise.all([
-                        this._animateTalking(motivationDuration),
-                        speak(motivationResponse)
-                    ]);
-                } else {
-                    // Start talking animation and speech simultaneously for other characters
-                    await Promise.all([
-                        this._animateTalking(motivationDuration),
-                        speak(motivationResponse)
-                    ]);
-                }
+                // Start animation and speech in parallel, animation will stop when speech ends
+                this._startTalkingAnimationWithSpeech(responseText);
                 break;
 
             case 'petMessage':
-                console.log('Pet message received for character:', message.characterId);
+                console.log('[JudyAI Debug] Pet message received for character:', message.characterId);
 
                 // Set to happy state immediately when petted
-                this._updateAvatarState('happy' as AvatarState);
+                this._updateAvatarState(AvatarState.HAPPY);
 
                 // Get character-specific pet response
                 const character = this._avatarManager.currentCharacter;
@@ -160,32 +98,12 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                     text: petResponse
                 });
 
-                // Estimate speech duration (rough: 150 words per minute, 5 chars per word)
-                const petDuration = Math.max(2000, (petResponse.length / 5 / 150) * 60 * 1000);
-
-                // For Judy, wait for laugh to finish before starting talking animation
-                if (this._avatarManager.currentCharacter?.id === 'judy') {
-                    // Wait for laugh animation to complete
-                    while (this._isAnimating) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-
-                    // Now start talking animation and speech
-                    await Promise.all([
-                        this._animateTalking(petDuration),
-                        speak(petResponse)
-                    ]);
-                } else {
-                    // For other characters, start talking animation and speech simultaneously
-                    await Promise.all([
-                        this._animateTalking(petDuration),
-                        speak(petResponse)
-                    ]);
-                }
+                // Start animation and speech in parallel
+                this._startTalkingAnimationWithSpeech(petResponse);
                 break;
 
             default:
-                console.warn('Unknown message type:', message.type);
+                console.warn('[JudyAI Debug] Unknown message type:', message.type);
         }
     }
 
@@ -255,7 +173,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 }
             } else {
                 // Fallback to default blank PNG
-                console.warn(`Frame image not found: ${framePath}, using default fallback`);
+                console.warn(`[JudyAI Debug] Frame image not found: ${framePath}, using default fallback`);
                 const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
                 imageData = fs.readFileSync(defaultPath);
                 mimeType = 'image/png';
@@ -269,7 +187,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 imageUrl: imageUrl
             });
         } catch (error) {
-            console.error('Error loading frame image:', error);
+            console.error('[JudyAI Debug] Error loading frame image:', error);
             try {
                 // Try to use the same default.png fallback
                 const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
@@ -282,7 +200,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                     imageUrl: imageUrl
                 });
             } catch (fallbackError) {
-                console.error('Error loading default fallback image:', fallbackError);
+                console.error('[JudyAI Debug] Error loading default fallback image:', fallbackError);
                 // Send a minimal transparent PNG as final fallback
                 const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
                 this._view.webview.postMessage({
@@ -298,99 +216,22 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             return;
         }
 
-        // Don't allow state changes during special animations
-        if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
-            return;
-        }
-
         this._avatarManager.setState(state);
 
-        // Handle special Judy animations
-        if (this._avatarManager.currentCharacter?.id === 'judy') {
-            if (state === 'happy' as AvatarState) {
-                // For Judy, trigger laugh animation instead of static happy state
-                this._isAnimating = true;
-                this._animateJudyLaugh(3000).then(() => {
-                    this._isAnimating = false;
-                });
-                return;
-            } else if (state === 'thinking' as AvatarState) {
-                // For Judy, show thinking frame 1 and stay there
-                this._animateJudyThinking();
-                return;
-            }
-        }
-
-        // Default behavior for other characters or other states
         const frameMap = this._avatarManager.currentCharacter
             ? this._avatarManager.getFrameMap(this._avatarManager.currentCharacter.id)
             : null;
 
-        // Don't send stateChanged during Judy animations to prevent webview interference
-        if (!(this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy')) {
-            this._view.webview.postMessage({
-                type: 'stateChanged',
-                state: state,
-                frameMap: frameMap
-            });
-        }
-    }
-
-    private _sendSpecificFrameImage(frameName: string) {
-        if (!this._view || !this._avatarManager.currentCharacter) {
-            return;
-        }
-
-        const characterId = this._avatarManager.currentCharacter.id;
-        const framePath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'characters', characterId, 'frames', frameName);
-
-        try {
-            let imageData: Buffer;
-            let mimeType = 'image/png';
-
-            if (fs.existsSync(framePath)) {
-                imageData = fs.readFileSync(framePath);
-
-                const ext = path.extname(frameName).toLowerCase();
-                if (ext === '.gif') {
-                    mimeType = 'image/gif';
-                } else if (ext === '.jpg' || ext === '.jpeg') {
-                    mimeType = 'image/jpeg';
-                }
-            } else {
-                // Fallback to default
-                const defaultPath = path.join(this._extensionUri.fsPath, 'src', 'avatars', 'default.png');
-                imageData = fs.readFileSync(defaultPath);
-                mimeType = 'image/png';
-            }
-
-            const base64Data = imageData.toString('base64');
-            const imageUrl = `data:${mimeType};base64,${base64Data}`;
-
-            this._view.webview.postMessage({
-                type: 'frameImage',
-                imageUrl: imageUrl
-            });
-        } catch (error) {
-            console.error('Error loading specific frame image:', error);
-            // Use minimal fallback on error
-            const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGAWGZPFwAAAABJRU5ErkJggg==';
-            this._view.webview.postMessage({
-                type: 'frameImage',
-                imageUrl: fallbackImage
-            });
-        }
+        this._view.webview.postMessage({
+            type: 'stateChanged',
+            state: state,
+            frameMap: frameMap
+        });
     }
 
     private _animateFrames(delayMs: number, states: AvatarState[], shouldLoop: boolean, durationMs?: number): Promise<void> {
         return new Promise((resolve) => {
             if (!this._view || states.length === 0) {
-                resolve();
-                return;
-            }
-
-            // Don't start new animations during special Judy animations
-            if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
                 resolve();
                 return;
             }
@@ -404,8 +245,8 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                     const elapsed = Date.now() - startTime;
                     if (elapsed >= durationMs) {
                         clearInterval(interval);
-                        // Return to default state when done
-                        this._updateAvatarState('default' as AvatarState);
+                        // Return to idle state when done
+                        this._updateAvatarState(AvatarState.IDLE);
                         resolve();
                         return;
                     }
@@ -432,171 +273,41 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private _animateJudyLaugh(durationMs: number): Promise<void> {
-        return new Promise((resolve) => {
-            if (!this._view) {
-                resolve();
-                return;
-            }
-
-            const frameDelay = 400; // 400ms per frame
-            const holdDuration = 2000; // Hold at frame 3 for exactly 2000ms
-            const startSequence = ['Judy_Laugh_1.png', 'Judy_Laugh_2.png', 'Judy_Laugh_3.png'];
-            const endSequence = ['Judy_Laugh_3.png', 'Judy_Laugh_2.png', 'Judy_Laugh_1.png'];
-
-            let currentPhase = 'start'; // 'start', 'hold', 'end'
-            let frameIndex = 0;
-            let startTime = Date.now();
-            let holdStartTime = 0;
-
-            const interval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-
-                // Play current frame based on phase
-                let currentFrame: string;
-
-                if (currentPhase === 'start') {
-                    currentFrame = startSequence[frameIndex];
-                    frameIndex++;
-
-                    if (frameIndex >= startSequence.length) {
-                        currentPhase = 'hold';
-                        holdStartTime = Date.now();
-                    }
-                } else if (currentPhase === 'hold') {
-                    // Hold at frame 3 for exactly 2000ms
-                    currentFrame = 'Judy_Laugh_3.png';
-
-                    // Check if hold duration is complete
-                    if (Date.now() - holdStartTime >= holdDuration) {
-                        currentPhase = 'end';
-                        frameIndex = 0;
-                    }
-                } else { // end phase
-                    if (frameIndex < endSequence.length) {
-                        currentFrame = endSequence[frameIndex];
-                        frameIndex++;
-                    } else {
-                        // Animation complete
-                        clearInterval(interval);
-                        this._updateAvatarState('default' as AvatarState);
-                        resolve();
-                        return;
-                    }
-                }
-
-                this._sendSpecificFrameImage(currentFrame);
-            }, frameDelay);
-        });
-    }
-
-    private _animateJudyThinking(): Promise<void> {
-        return new Promise((resolve) => {
-            if (!this._view) {
-                resolve();
-                return;
-            }
-
-            // Just show thinking 1 and stay there
-            this._sendSpecificFrameImage('Judy_Thinking_1.png');
-            resolve();
-        });
-    }
-
-    private _animateJudyThinkingToTalking(): Promise<void> {
-        return new Promise((resolve) => {
-            if (!this._view) {
-                resolve();
-                return;
-            }
-
-            const frameDelay = 400;
-            const transitionSequence = ['Judy_Thinking_1.png', 'Judy_Thinking_2.png', 'Judy_Thinking_3.png'];
-            let frameIndex = 0;
-
-            const interval = setInterval(() => {
-                if (frameIndex < transitionSequence.length) {
-                    this._sendSpecificFrameImage(transitionSequence[frameIndex]);
-                    frameIndex++;
-                } else {
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, frameDelay);
-        });
-    }
-
-    private _animateJudyTalking(durationMs: number): Promise<void> {
-        return new Promise((resolve) => {
-            if (!this._view) {
-                resolve();
-                return;
-            }
-
-            const frameDelay = 400; // 400ms per frame
-            const sequence = ['Judy_Talking_1.png', 'Judy_Talking_2.png', 'Judy_Talking_3.png'];
-            const loopSequence = ['Judy_Talking_2.png', 'Judy_Talking_3.png'];
-            const endSequence = ['Judy_Talking_2.png', 'Judy_Talking_1.png'];
-
-            let currentPhase = 'start'; // 'start', 'loop', 'end'
-            let frameIndex = 0;
-            let startTime = Date.now();
-
-            const interval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-
-                // Check if we should start ending sequence
-                if (currentPhase === 'loop' && elapsed >= durationMs - (endSequence.length * frameDelay)) {
-                    currentPhase = 'end';
-                    frameIndex = 0;
-                }
-
-                // Play current frame based on phase
-                let currentFrame: string;
-
-                if (currentPhase === 'start') {
-                    currentFrame = sequence[frameIndex];
-                    frameIndex++;
-
-                    if (frameIndex >= sequence.length) {
-                        currentPhase = 'loop';
-                        frameIndex = 0;
-                    }
-                } else if (currentPhase === 'loop') {
-                    currentFrame = loopSequence[frameIndex % loopSequence.length];
-                    frameIndex++;
-                } else { // end phase
-                    if (frameIndex < endSequence.length) {
-                        currentFrame = endSequence[frameIndex];
-                        frameIndex++;
-                    } else {
-                        // Animation complete
-                        clearInterval(interval);
-                        this._updateAvatarState('default' as AvatarState);
-                        resolve();
-                        return;
-                    }
-                }
-
-                this._sendSpecificFrameImage(currentFrame);
-            }, frameDelay);
-        });
-    }
-
     private _animateTalking(durationMs: number): Promise<void> {
-        // Don't start talking animation during special Judy animations
-        if (this._isAnimating && this._avatarManager.currentCharacter?.id === 'judy') {
-            return Promise.resolve();
-        }
+        // Alternate between idle and talking to simulate mouth movement
+        const talkingStates: AvatarState[] = [AvatarState.IDLE, AvatarState.TALKING];
+        return this._animateFrames(200, talkingStates, true, durationMs);
+    }
 
-        // Check if current character is Judy
-        if (this._avatarManager.currentCharacter?.id === 'judy') {
-            return this._animateJudyTalking(durationMs);
-        }
+    private async _startTalkingAnimationWithSpeech(text: string): Promise<void> {
+        try {
+            // Start animation immediately while speech loads
+            let animationActive = true;
 
-        // Default animation for other characters
-        const talkingStates: AvatarState[] = ['default' as AvatarState, 'talking' as AvatarState];
-        return this._animateFrames(500, talkingStates, true, durationMs);
+            // Start the mouth animation loop immediately
+            const animationPromise = (async () => {
+                const talkingStates: AvatarState[] = [AvatarState.IDLE, AvatarState.TALKING];
+                let currentFrameIndex = 0;
+
+                while (animationActive) {
+                    this._updateAvatarState(talkingStates[currentFrameIndex]);
+                    currentFrameIndex = (currentFrameIndex + 1) % talkingStates.length;
+                    await new Promise(resolve => setTimeout(resolve, 400));
+                }
+
+                // Return to idle when done
+                this._updateAvatarState(AvatarState.IDLE);
+            })();
+
+            // Play speech and stop animation when done
+            await speakWithDuration(text);
+            animationActive = false;
+            await animationPromise;
+        } catch (error) {
+            console.error('[JudyAI Debug] Error in talking animation with speech:', error);
+            // Return to idle state on error
+            this._updateAvatarState(AvatarState.IDLE);
+        }
     }
 
 
@@ -629,21 +340,6 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             location: sidebarLocation
         });
     }
-
-    public setMotivationSystem(motivationSystem: MotivationSystem) {
-        this._motivationSystem = motivationSystem;
-
-        // Subscribe to motivation messages
-        motivationSystem.onMotivationCallback((message: string) => {
-            if (this._view) {
-                this._view.webview.postMessage({
-                    type: 'chatResponse',
-                    text: message
-                });
-            }
-        });
-    }
-
 
     public dispose() {
     }

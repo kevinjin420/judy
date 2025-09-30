@@ -3,7 +3,7 @@ const vscode = acquireVsCodeApi();
 // Get saved state
 const state = vscode.getState() || {
 	selectedCharacter: "judy",
-	currentState: "default",
+	currentState: "idle",
 };
 
 // DOM elements
@@ -77,7 +77,7 @@ characterSelector.addEventListener("change", (e) => {
 
 // Pet button functionality
 petButton.addEventListener("click", () => {
-	console.log("Avatar petted!");
+	console.log("[JudyAI Debug] Avatar petted!");
 	showHeartTooltip();
 
 	// Send pet message to LLM (backend handles the laugh animation)
@@ -100,7 +100,7 @@ function showHeartTooltip() {
 
 // Handle sidebar location changes
 function handleSidebarLocation(location) {
-	console.log("Sidebar location:", location);
+	console.log("[JudyAI Debug] Sidebar location:", location);
 
 	if (location === "left") {
 		avatarImage.classList.add("flipped");
@@ -144,7 +144,7 @@ window.addEventListener("message", (event) => {
 		case "characterSelected":
 			updateCharacterDisplay(message.character);
 			currentFrameMap = message.frameMap;
-			updateAvatarState("default", currentFrameMap);
+			updateAvatarState("idle", currentFrameMap);
 
 			chatResponse.textContent = "No messages yet";
 			break;
@@ -203,7 +203,7 @@ chatInput.addEventListener("keydown", (e) => {
 
 window.addEventListener("message", (event) => {
 	const message = event.data;
-	console.log("Received message in webview:", message); // DEBUG
+	console.log("[JudyAI Debug] Received message in webview:", message);
 	if (message.type === "chatResponse") {
 		chatResponse.textContent = message.text;
 	}
@@ -215,7 +215,7 @@ chatInput.addEventListener("keydown", (e) => {
 		if (!message) {
 			return;
 		}
-		console.log("Sending chatMessage to extension:", message); // debug
+		console.log("[JudyAI Debug] Sending chatMessage to extension:", message);
 		vscode.postMessage({
 			type: "chatMessage",
 			text: message,

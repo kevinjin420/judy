@@ -2,8 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Character, AvatarState, AvatarManager as IAvatarManager, FrameMap } from '../types/avatar.js';
-import { changeprompt } from "../../llmcall.mjs";
-import { updatevoice } from "../../11labstest.mjs"
+import { configureCharacter } from "../../apiService.js";
 
 
 export class AvatarManager implements IAvatarManager {
@@ -21,23 +20,8 @@ export class AvatarManager implements IAvatarManager {
         return this._currentCharacter;
     }
 
-    get currentState(): AvatarState {
-        return this._currentState;
-    }
-
     get availableCharacters(): Character[] {
         return this._availableCharacters;
-    }
-
-    async loadCharacter(characterId: string): Promise<Character> {
-        const characterPath = path.join(this._charactersPath, characterId, 'character.json');
-
-        try {
-            const characterData = JSON.parse(fs.readFileSync(characterPath, 'utf8'));
-            return characterData as Character;
-        } catch (error) {
-            throw new Error(`Failed to load character ${characterId}: ${error}`);
-        }
     }
 
     public getFrameMap(characterId: string): FrameMap {
@@ -55,35 +39,26 @@ export class AvatarManager implements IAvatarManager {
                 return loadedCharacter.frames;
             }
         } catch (error) {
-            console.warn(`Failed to load character frames for ${characterId}:`, error);
+            console.warn(`[JudyAI Debug] Failed to load character frames for ${characterId}:`, error);
         }
 
         // Return default frames if character or frames don't exist
         return {
             [AvatarState.IDLE]: 'idle.png',
-            [AvatarState.WAITING]: 'waiting.png',
             [AvatarState.TALKING]: 'talking.png',
             [AvatarState.THINKING]: 'thinking.png',
-            [AvatarState.LISTENING]: 'listening.png',
-            [AvatarState.ERROR]: 'error.png'
+            [AvatarState.HAPPY]: 'happy.png'
         };
-    }
-
-    getCurrentFramePath(): string {
-        if (!this._currentCharacter) return '';
-
-        const frameName = this._currentCharacter.frames[this._currentState];
-
-        if (!frameName) return '';
-
-        return path.join(this._charactersPath, this._currentCharacter.id, 'frames', frameName);
     }
 
     async switchCharacter(characterId: string): Promise<void> {
         try {
-            const character = await this.loadCharacter(characterId);
-            changeprompt(character.systemPrompt);
-            updatevoice(character.voiceid);
+            const character = this.loadCharacterSync(characterId);
+            if (!character) {
+                throw new Error('Character not found');
+            }
+
+            configureCharacter(character.systemPrompt, character.voiceid);
             this._currentCharacter = character;
             this.setState(AvatarState.IDLE);
 
@@ -101,13 +76,6 @@ export class AvatarManager implements IAvatarManager {
     getCharacterList(): Character[] {
         return this._availableCharacters.filter(char => char.enabled);
     }
-
-    updateCharacter(character: Partial<Character>): void {
-        if (this._currentCharacter && character.id === this._currentCharacter.id) {
-            this._currentCharacter = { ...this._currentCharacter, ...character };
-        }
-    }
-
 
     private loadAllCharacters(): void {
         try {
@@ -128,7 +96,7 @@ export class AvatarManager implements IAvatarManager {
                         this._availableCharacters.push(character);
                     }
                 } catch (error) {
-                    console.warn(`Failed to load character ${dir}:`, error);
+                    console.warn(`[JudyAI Debug] Failed to load character ${dir}:`, error);
                 }
             }
 
@@ -140,7 +108,7 @@ export class AvatarManager implements IAvatarManager {
                 this.switchCharacter(this._availableCharacters[0].id);
             }
         } catch (error) {
-            console.error('Failed to load characters:', error);
+            console.error('[JudyAI Debug] Failed to load characters:', error);
         }
     }
 
@@ -152,23 +120,5 @@ export class AvatarManager implements IAvatarManager {
         } catch (error) {
             return null;
         }
-    }
-
-    async createCharacter(character: Character): Promise<void> {
-        const characterDir = path.join(this._charactersPath, character.id);
-
-        // Create character directory
-        if (!fs.existsSync(characterDir)) {
-            fs.mkdirSync(characterDir, { recursive: true });
-        }
-
-        // Save character data
-        fs.writeFileSync(
-            path.join(characterDir, 'character.json'),
-            JSON.stringify(character, null, 2)
-        );
-
-        // Reload characters
-        this.loadAllCharacters();
     }
 }
