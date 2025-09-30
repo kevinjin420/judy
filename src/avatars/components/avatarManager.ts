@@ -61,9 +61,6 @@ export class AvatarManager implements IAvatarManager {
             configureCharacter(character.systemPrompt, character.voiceid);
             this._currentCharacter = character;
             this.setState(AvatarState.IDLE);
-
-            // Save current character preference
-            await vscode.workspace.getConfiguration('judy').update('currentCharacter', characterId, true);
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to switch character: ${error}`);
         }
@@ -100,11 +97,8 @@ export class AvatarManager implements IAvatarManager {
                 }
             }
 
-            // Load the last selected character
-            const savedCharacter = vscode.workspace.getConfiguration('judy').get<string>('currentCharacter');
-            if (savedCharacter && this._availableCharacters.some(c => c.id === savedCharacter)) {
-                this.switchCharacter(savedCharacter);
-            } else if (this._availableCharacters.length > 0) {
+            // Load the first available character
+            if (this._availableCharacters.length > 0) {
                 this.switchCharacter(this._availableCharacters[0].id);
             }
         } catch (error) {

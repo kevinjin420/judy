@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AvatarManager } from './avatars/components/avatarManager.js';
 import { AvatarState, Character } from './avatars/types/avatar.js';
-import "dotenv/config";
 import { askGemini, speakWithDuration } from './apiService.js';
 
 export class JudySidebarProvider implements vscode.WebviewViewProvider {
@@ -36,6 +35,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
         // Send initial data to webview
         this._sendCharactersToWebview();
         this._sendSidebarLocation();
+        this._checkAndNotifyApiKeys();
     }
 
     private async _handleWebviewMessage(message: any) {
@@ -339,6 +339,23 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             type: 'sidebarLocation',
             location: sidebarLocation
         });
+    }
+
+    private _checkAndNotifyApiKeys() {
+        if (!this._view) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('judy');
+        const geminiKey = config.get('geminiApiKey', '');
+        const elevenLabsKey = config.get('elevenlabsApiKey', '');
+
+        if (!geminiKey || !elevenLabsKey) {
+            this._view.webview.postMessage({
+                type: 'chatResponse',
+                text: 'API keys are not configured. Please configure your Gemini and ElevenLabs API keys in VS Code settings.\n\nUse the command: "Judy: Open Settings" from the Command Palette (Ctrl+Shift+P or Cmd+Shift+P)'
+            });
+        }
     }
 
     public dispose() {

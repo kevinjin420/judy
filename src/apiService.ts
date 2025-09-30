@@ -1,27 +1,39 @@
-import * as dotenv from "dotenv";
-import * as path from "path";
-import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { ElevenLabsClient, play } from "@elevenlabs/elevenlabs-js";
 
-// Recreate __dirname in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Lazy-initialized clients (will be created when first used)
+let ai: GoogleGenAI | null = null;
+let elevenlabs: ElevenLabsClient | null = null;
 
-// Load environment variables
-dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+/**
+ * Get or initialize the Gemini AI client
+ */
+function getAI(): GoogleGenAI {
+	if (!ai) {
+		const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+		if (!GEMINI_API_KEY) {
+			throw new Error("GEMINI_API_KEY not found. Please configure your API keys in Judy settings.");
+		}
+		console.log("[JudyAI Debug] Initializing Gemini client");
+		ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+	}
+	return ai;
+}
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-
-console.log("[JudyAI Debug] Gemini API Key configured:", !!GEMINI_API_KEY);
-console.log(
-	"[JudyAI Debug] ElevenLabs API Key configured:",
-	!!ELEVENLABS_API_KEY
-);
-
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-const elevenlabs = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
+/**
+ * Get or initialize the ElevenLabs client
+ */
+function getElevenLabs(): ElevenLabsClient {
+	if (!elevenlabs) {
+		const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+		if (!ELEVENLABS_API_KEY) {
+			throw new Error("ELEVENLABS_API_KEY not found. Please configure your API keys in Judy settings.");
+		}
+		console.log("[JudyAI Debug] Initializing ElevenLabs client");
+		elevenlabs = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
+	}
+	return elevenlabs;
+}
 
 // Store conversation history
 const conversationHistory: { role: "user" | "assistant"; text: string }[] = [];
@@ -79,7 +91,7 @@ export async function askGemini(userPrompt: string): Promise<string> {
 				")"
 			);
 
-			const response = await ai.models.generateContent({
+			const response = await getAI().models.generateContent({
 				model: "gemini-2.0-flash-001",
 				contents: fullPrompt,
 			});
@@ -181,7 +193,7 @@ function getMP3Duration(buffer: Uint8Array): number {
  */
 export async function speakWithDuration(
 	input: string,
-	speedRate: number = 0.9
+	speedRate: number = 1.0
 ): Promise<number> {
 	try {
 		console.log(
@@ -191,7 +203,7 @@ export async function speakWithDuration(
 		console.log("[JudyAI Debug] Using voice ID:", voiceId);
 		console.log("[JudyAI Debug] Speech speed rate:", speedRate);
 
-		const audio = await elevenlabs.textToSpeech.convert(voiceId, {
+		const audio = await getElevenLabs().textToSpeech.convert(voiceId, {
 			text: input,
 			modelId: "eleven_flash_v2_5",
 			outputFormat: "mp3_44100_128",

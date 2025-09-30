@@ -9,7 +9,6 @@ const state = vscode.getState() || {
 // DOM elements
 const characterSelector = document.getElementById("characterSelector");
 const avatarImage = document.getElementById("avatarImage");
-const stateDisplay = document.getElementById("stateDisplay");
 const petButton = document.getElementById("petButton");
 const heartTooltip = document.getElementById("heartTooltip");
 
@@ -47,9 +46,6 @@ function updateCharacterDisplay(character) {
 
 // Update avatar state
 function updateAvatarState(newState, frameMap) {
-	// Update state display
-	stateDisplay.textContent = newState.charAt(0).toUpperCase() + newState.slice(1);
-
 	// Load the frame for this state
 	if (frameMap && frameMap[newState] && state.selectedCharacter) {
 		const frameName = frameMap[newState];
