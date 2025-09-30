@@ -153,9 +153,9 @@ html, body {
     color: var(--vscode-input-foreground);
     border: 1px solid var(--vscode-input-border);
     border-radius: 4px;
-    padding: 6px 8px;
-    min-height: 30px;
-    max-height: 60px;
+    padding: 8px;
+    min-height: 80px;
+    max-height: 150px;
     overflow-y: auto;
     font-size: 12px;
 }

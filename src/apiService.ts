@@ -24,7 +24,7 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const elevenlabs = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
 
 // Store conversation history
-const conversationHistory: { role: "user" | "assistant"; text: string }[] = [];
+const conversationHistory: { role: "user" | "model"; text: string }[] = [];
 
 // Voice ID and system prompt - configured per character
 let voiceId = "zmcVlqmyk3Jpn5AVYcAL"; // Default voice id
@@ -49,75 +49,87 @@ function streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
 		},
 	};
 }
-
 /**
  * Ask Gemini for a response, storing conversation history
  * Automatically retries on 503 errors (model overloaded)
  */
 export async function askGemini(userPrompt: string): Promise<string> {
-	conversationHistory.push({ role: "user", text: userPrompt });
+  conversationHistory.push({ role: "user", text: userPrompt });
 
-	let fullPrompt = systemPrompt + "\n";
-	for (const msg of conversationHistory) {
-		if (msg.role === "user") {
-			fullPrompt += `User: ${msg.text}\n`;
-		} else {
-			fullPrompt += `Assistant: ${msg.text}\n`;
-		}
-	}
+  // Build structured messages - prepend system prompt to first user message
+  const contents = conversationHistory.map((msg, index) => {
+    if (msg.role === "user" && index === 0) {
+      // Prepend system prompt to first user message
+      return {
+        role: "user",
+        parts: [{ text: systemPrompt + "\n\n" + msg.text }],
+      };
+    }
+    return {
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.text }],
+    };
+  });
 
-	const maxRetries = 3;
-	let lastError: any;
+  const maxRetries = 3;
+  let lastError: any;
 
-	for (let attempt = 1; attempt <= maxRetries; attempt++) {
-		try {
-			console.log(
-				"[JudyAI Debug] Sending request to Gemini (attempt",
-				attempt,
-				"of",
-				maxRetries,
-				")"
-			);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(
+        "[JudyAI Debug] Sending request to Gemini (attempt",
+        attempt,
+        "of",
+        maxRetries,
+        ")"
+      );
 
-			const response = await ai.models.generateContent({
-				model: "gemini-2.0-flash-001",
-				contents: fullPrompt,
-			});
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-001",
+        contents,
+      });
 
-			let reply = "";
-			if (response.text) {
-				reply = response.text.trim();
-			}
+      let reply = "";
+      if (response.text) {
+        reply = response.text.trim();
+      }
 
-			conversationHistory.push({ role: "assistant", text: reply });
-			console.log("[JudyAI Debug] Gemini request succeeded");
-			return reply;
-		} catch (error: any) {
-			lastError = error;
-			const is503 =
-				error?.message?.includes("503") ||
-				error?.message?.includes("overloaded") ||
-				error?.message?.includes("UNAVAILABLE");
+      // Store as "model" not "assistant" so she isn't locked into that role
+      conversationHistory.push({ role: "model", text: reply });
+      console.log("[JudyAI Debug] Gemini request succeeded");
+      return reply;
+    } catch (error: any) {
+      lastError = error;
+      const is503 =
+        error?.message?.includes("503") ||
+        error?.message?.includes("overloaded") ||
+        error?.message?.includes("UNAVAILABLE");
 
-			if (is503 && attempt < maxRetries) {
-				const waitTime = attempt * 1000; // 1s, 2s, 3s...
-				console.log(
-					"[JudyAI Debug] Gemini model overloaded, retrying in",
-					waitTime,
-					"ms..."
-				);
-				await new Promise((resolve) => setTimeout(resolve, waitTime));
-			} else if (!is503) {
-				// Non-503 error, don't retry
-				break;
-			}
-		}
-	}
+      if (is503 && attempt < maxRetries) {
+        const waitTime = attempt * 1000; // 1s, 2s, 3s...
+        console.log(
+          "[JudyAI Debug] Gemini model overloaded, retrying in",
+          waitTime,
+          "ms..."
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      } else if (!is503) {
+        // Non-503 error, don't retry
+        break;
+      }
+    }
+  }
 
-	// All retries failed
-	console.error("[JudyAI Debug] Gemini request failed after", maxRetries, "attempts:", lastError);
-	throw lastError;
+  // All retries failed
+  console.error(
+    "[JudyAI Debug] Gemini request failed after",
+    maxRetries,
+    "attempts:",
+    lastError
+  );
+  throw lastError;
 }
+
 
 /**
  * Get audio duration from MP3 buffer using first frame header

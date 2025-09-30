@@ -91,7 +91,7 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 // Get character-specific pet response
                 const character = this._avatarManager.currentCharacter;
                 const characterName = character?.displayName || 'the character';
-                const petResponse = await askGemini(`The user just pet ${characterName} on the head. Respond warmly and briefly to being petted, staying in character.`);
+                const petResponse = await askGemini(`The user just pet ${characterName} on the head. Respond warmly and briefly to being petted, trying to staying in character.`);
 
                 this._view?.webview.postMessage({
                     type: 'chatResponse',
