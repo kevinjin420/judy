@@ -91,15 +91,38 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 // Set to thinking state while waiting for LLM response
                 this._updateAvatarState(AvatarState.THINKING);
 
-                const responseText = await askGemini(userMsg);
+                try {
+                    const responseText = await askGemini(userMsg);
 
-                this._view?.webview.postMessage({
-                    type: 'chatResponse',
-                    text: responseText
-                });
+                    this._view?.webview.postMessage({
+                        type: 'chatResponse',
+                        text: responseText
+                    });
 
-                // Start animation and speech in parallel, animation will stop when speech ends
-                this._startTalkingAnimationWithSpeech(responseText);
+                    // Start animation and speech in parallel, animation will stop when speech ends
+                    await this._startTalkingAnimationWithSpeech(responseText);
+                } catch (error) {
+                    console.error('[JudyAI Debug] Error in chat message handling:', error);
+                    this._updateAvatarState(AvatarState.IDLE);
+
+                    let errorMessage = 'Sorry, something went wrong. ';
+                    if (error instanceof Error) {
+                        if (error.message.includes('GEMINI_API_KEY') || error.message.includes('API key')) {
+                            errorMessage += 'Please check your Gemini API key in settings.';
+                        } else if (error.message.includes('503') || error.message.includes('overloaded')) {
+                            errorMessage += 'The Gemini API is overloaded. Please try again in a moment.';
+                        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                            errorMessage += 'Network error. Please check your internet connection.';
+                        } else {
+                            errorMessage += 'Please try again.';
+                        }
+                    }
+
+                    this._view?.webview.postMessage({
+                        type: 'chatResponse',
+                        text: errorMessage
+                    });
+                }
                 break;
 
             case 'petMessage':
@@ -108,18 +131,28 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
                 // Set to happy state immediately when petted
                 this._updateAvatarState(AvatarState.HAPPY);
 
-                // Get character-specific pet response
-                const character = this._avatarManager.currentCharacter;
-                const characterName = character?.displayName || 'the character';
-                const petResponse = await askGemini(`The user just pet ${characterName} on the head. Respond warmly and briefly to being petted, trying to staying in character.`);
+                try {
+                    // Get character-specific pet response
+                    const character = this._avatarManager.currentCharacter;
+                    const characterName = character?.displayName || 'the character';
+                    const petResponse = await askGemini(`The user just pet ${characterName} on the head. Respond warmly and briefly to being petted, trying to staying in character.`);
 
-                this._view?.webview.postMessage({
-                    type: 'chatResponse',
-                    text: petResponse
-                });
+                    this._view?.webview.postMessage({
+                        type: 'chatResponse',
+                        text: petResponse
+                    });
 
-                // Start animation and speech in parallel
-                this._startTalkingAnimationWithSpeech(petResponse);
+                    // Start animation and speech in parallel
+                    await this._startTalkingAnimationWithSpeech(petResponse);
+                } catch (error) {
+                    console.error('[JudyAI Debug] Error in pet message handling:', error);
+                    this._updateAvatarState(AvatarState.IDLE);
+
+                    this._view?.webview.postMessage({
+                        type: 'chatResponse',
+                        text: 'Sorry, I couldn\'t respond right now. Please check your API settings.'
+                    });
+                }
                 break;
 
             default:
@@ -300,10 +333,9 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private async _startTalkingAnimationWithSpeech(text: string): Promise<void> {
-        try {
-            // Start animation immediately while speech loads
-            let animationActive = true;
+        let animationActive = true;
 
+        try {
             // Start the mouth animation loop immediately
             const animationPromise = (async () => {
                 const talkingStates: AvatarState[] = [AvatarState.IDLE, AvatarState.TALKING];
@@ -325,8 +357,23 @@ export class JudySidebarProvider implements vscode.WebviewViewProvider {
             await animationPromise;
         } catch (error) {
             console.error('[JudyAI Debug] Error in talking animation with speech:', error);
+            animationActive = false;
             // Return to idle state on error
             this._updateAvatarState(AvatarState.IDLE);
+
+            // Show error message to user
+            let errorMessage = 'Audio playback failed. ';
+            if (error instanceof Error) {
+                if (error.message.includes('ELEVENLABS_API_KEY') || error.message.includes('API key')) {
+                    errorMessage += 'Please check your ElevenLabs API key in settings.';
+                } else if (error.message.includes('quota') || error.message.includes('limit')) {
+                    errorMessage += 'API quota exceeded. Please check your ElevenLabs account.';
+                } else {
+                    errorMessage += 'Please check your ElevenLabs settings.';
+                }
+            }
+
+            vscode.window.showWarningMessage(errorMessage);
         }
     }
 

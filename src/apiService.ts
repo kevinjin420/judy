@@ -194,7 +194,7 @@ function getMP3Duration(buffer: Uint8Array): number {
  */
 export async function speakWithDuration(
 	input: string,
-	speedRate: number = 0.9
+	speedRate: number = 1.1
 ): Promise<number> {
 	try {
 		console.log(
@@ -254,8 +254,8 @@ export async function speakWithDuration(
 		// Get actual duration from the audio
 		const duration = getMP3Duration(audioBuffer);
 
-		// Play the audio with volume control
-		console.log("[JudyAI Debug] Starting playback with volume:", volumeLevel);
+		// Play the audio
+		console.log("[JudyAI Debug] Starting playback (volume control not supported by play API)");
 		await play(
 			streamToAsyncIterable(
 				new ReadableStream({
@@ -264,8 +264,7 @@ export async function speakWithDuration(
 						controller.close();
 					},
 				})
-			),
-			{ volume: volumeLevel }
+			)
 		);
 		console.log("[JudyAI Debug] Playback completed");
 
